@@ -9,19 +9,6 @@ WIDTH = 900
 HEIGHT = 600
 
 
-def limitar_camera(camera_x, camera_y, zoom):
-    largura_visivel = WIDTH / zoom
-    altura_visivel = HEIGHT / zoom
-
-    max_camera_x = max(0, LARGURA_MUNDO - largura_visivel)
-    max_camera_y = max(0, ALTURA_MUNDO - altura_visivel)
-
-    camera_x = max(0, min(camera_x, max_camera_x))
-    camera_y = max(0, min(camera_y, max_camera_y))
-
-    return camera_x, camera_y
-
-
 def main():
     pygame.init()
 
@@ -33,9 +20,8 @@ def main():
 
     camera_x = 0.0
     camera_y = 0.0
-
-    arrastando = False
-    mouse_anterior = (0, 0)
+    arrastando_camera = False
+    posicao_anterior_mouse = None
 
     quadrados = []
 
@@ -65,40 +51,33 @@ def main():
             if event.type == pygame.MOUSEWHEEL:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
 
-                # Posição do mundo que estava sob o mouse antes do zoom.
-                mundo_x = camera_x + mouse_x / zoom
-                mundo_y = camera_y + mouse_y / zoom
+                mundo_x_antes = camera_x + mouse_x / zoom
+                mundo_y_antes = camera_y + mouse_y / zoom
 
-                zoom_anterior = zoom
                 zoom += event.y * 0.1
                 zoom = max(0.25, min(zoom, 2.0))
 
-                # Mantém o mesmo ponto do mundo sob o mouse após o zoom.
-                camera_x = mundo_x - mouse_x / zoom
-                camera_y = mundo_y - mouse_y / zoom
+                camera_x = mundo_x_antes - mouse_x / zoom
+                camera_y = mundo_y_antes - mouse_y / zoom
 
-                camera_x, camera_y = limitar_camera(camera_x, camera_y, zoom)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 3:
+                    arrastando_camera = True
+                    posicao_anterior_mouse = event.pos
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-                arrastando = True
-                mouse_anterior = event.pos
+            if event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 3:
+                    arrastando_camera = False
+                    posicao_anterior_mouse = None
 
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
-                arrastando = False
-
-            if event.type == pygame.MOUSEMOTION and arrastando:
+            if event.type == pygame.MOUSEMOTION and arrastando_camera:
                 mouse_x, mouse_y = event.pos
-                anterior_x, anterior_y = mouse_anterior
+                anterior_x, anterior_y = posicao_anterior_mouse
 
-                deslocamento_x = mouse_x - anterior_x
-                deslocamento_y = mouse_y - anterior_y
+                camera_x -= (mouse_x - anterior_x) / zoom
+                camera_y -= (mouse_y - anterior_y) / zoom
 
-                # O movimento da câmera é inverso ao movimento do mouse.
-                camera_x -= deslocamento_x / zoom
-                camera_y -= deslocamento_y / zoom
-
-                camera_x, camera_y = limitar_camera(camera_x, camera_y, zoom)
-                mouse_anterior = event.pos
+                posicao_anterior_mouse = event.pos
 
         teclas = pygame.key.get_pressed()
 
@@ -108,17 +87,25 @@ def main():
         if teclas[pygame.K_MINUS] or teclas[pygame.K_KP_MINUS]:
             temperatura = max(temperatura - 0.1, -15)
 
+        largura_visivel = WIDTH / zoom
+        altura_visivel = HEIGHT / zoom
+
+        camera_x = max(0, min(camera_x, LARGURA_MUNDO - largura_visivel))
+        camera_y = max(0, min(camera_y, ALTURA_MUNDO - altura_visivel))
+
         cor_cenario = cor_grama(temperatura)
         screen.fill(cor_cenario)
 
         for q in quadrados:
             rect = q["rect"]
+
             rect_visual = pygame.Rect(
                 int((rect.x - camera_x) * zoom),
                 int((rect.y - camera_y) * zoom),
                 max(1, int(rect.width * zoom)),
                 max(1, int(rect.height * zoom))
             )
+
             pygame.draw.rect(screen, q["cor"], rect_visual)
 
         texto_temperatura = exibe_mensagem(
