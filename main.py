@@ -2,7 +2,7 @@ import pygame
 
 
 WIDTH = 900
-HEIGHT = 700
+HEIGHT = 600
 
 
 def main():
