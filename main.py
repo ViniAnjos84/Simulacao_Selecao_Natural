@@ -1,5 +1,7 @@
 import pygame
 
+from funcoes import cor_grama
+
 
 WIDTH = 900
 HEIGHT = 600
@@ -11,6 +13,8 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Simulação de Seleção Natural")
 
+    temperatura = 15
+
     clock = pygame.time.Clock()
     running = True
 
@@ -19,7 +23,8 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
-        screen.fill((30, 30, 30))
+        cor_cenario = cor_grama(temperatura)
+        screen.fill(cor_cenario)
         pygame.display.flip()
         clock.tick(60)
 
