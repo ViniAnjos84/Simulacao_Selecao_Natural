@@ -1,6 +1,6 @@
 import pygame
 
-from funcoes import cor_grama
+from funcoes import cor_grama, exibe_mensagem
 
 
 WIDTH = 900
@@ -33,6 +33,10 @@ def main():
 
         cor_cenario = cor_grama(temperatura)
         screen.fill(cor_cenario)
+
+        texto_temperatura = exibe_mensagem(f"Temperatura: {temperatura:.1f}°C", 24, (255, 255, 255))
+        screen.blit(texto_temperatura, (10, HEIGHT - texto_temperatura.get_height() - 10))
+
         pygame.display.flip()
         clock.tick(60)
 
