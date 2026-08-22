@@ -5,9 +5,9 @@ import pygame
 
 class Arbusto:
     def __init__(self, largura_mundo, altura_mundo):
-        self.PosX = random.randint(0, largura_mundo)
-        self.PosY = random.randint(0, altura_mundo)
         self.tamanho_arbusto = random.randint(100, 200)
+        self.PosX = random.randint(0, largura_mundo - self.tamanho_arbusto)
+        self.PosY = random.randint(0, altura_mundo - self.tamanho_arbusto)
         self.qtd_frutas = random.randint(30, 100)
 
         self.spritesheet = pygame.image.load(
@@ -52,12 +52,12 @@ class Arbusto:
 
 class Lago:
     def __init__(self, largura_mundo, altura_mundo):
-        self.PosX = random.randint(0, largura_mundo)
-        self.PosY = random.randint(0, altura_mundo)
-
         self.tamanho_lago = random.randint(4, 7)
         self.largura_lago = self.tamanho_lago * 64
         self.altura_lago = self.tamanho_lago * 32
+
+        self.PosX = random.randint(0, largura_mundo - self.largura_lago)
+        self.PosY = random.randint(0, altura_mundo - self.altura_lago)
 
         imagens_variacoes = random.choice([
             "images/objects/lago1.png",
