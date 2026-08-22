@@ -2,7 +2,7 @@ import random
 
 import pygame
 
-from funcoes import cor_grama, exibe_mensagem
+from funcoes import ALTURA_MUNDO, LARGURA_MUNDO, cor_grama, exibe_mensagem
 
 
 WIDTH = 900
@@ -16,14 +16,15 @@ def main():
     pygame.display.set_caption("Simulação de Seleção Natural")
 
     temperatura = 15
+    zoom = 1.0
 
     quadrados = []
 
     TAMANHO = 10
 
     for _ in range(1000):
-        x = random.randint(0, WIDTH - TAMANHO)
-        y = random.randint(0, HEIGHT - TAMANHO)
+        x = random.randint(0, LARGURA_MUNDO - TAMANHO)
+        y = random.randint(0, ALTURA_MUNDO - TAMANHO)
 
         cor1 = (77, 170, 73)
         cor2 = (120, 170, 73)
@@ -42,6 +43,10 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
+            if event.type == pygame.MOUSEWHEEL:
+                zoom += event.y * 0.1
+                zoom = max(0.25, min(zoom, 2.0))
+
         teclas = pygame.key.get_pressed()
 
         if teclas[pygame.K_PLUS] or teclas[pygame.K_KP_PLUS]:
@@ -54,7 +59,14 @@ def main():
         screen.fill(cor_cenario)
 
         for q in quadrados:
-            pygame.draw.rect(screen, q["cor"], q["rect"])
+            rect = q["rect"]
+            rect_visual = pygame.Rect(
+                int(rect.x * zoom),
+                int(rect.y * zoom),
+                max(1, int(rect.width * zoom)),
+                max(1, int(rect.height * zoom))
+            )
+            pygame.draw.rect(screen, q["cor"], rect_visual)
 
         texto_temperatura = exibe_mensagem(
             f"Temperatura: {temperatura:.1f}°C",
