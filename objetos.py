@@ -48,3 +48,27 @@ class Arbusto:
             self.indice_frame_atual = 3
 
         self.image = self.frames_arbusto[self.indice_frame_atual]
+
+
+class Lago:
+    def __init__(self, largura_mundo, altura_mundo):
+        self.PosX = random.randint(0, largura_mundo)
+        self.PosY = random.randint(0, altura_mundo)
+
+        self.tamanho_lago = random.randint(4, 7)
+        self.largura_lago = self.tamanho_lago * 64
+        self.altura_lago = self.tamanho_lago * 32
+
+        imagens_variacoes = random.choice([
+            "images/objects/lago1.png",
+            "images/objects/lago2.png"
+        ])
+
+        self.image = pygame.image.load(imagens_variacoes).convert_alpha()
+        self.image = pygame.transform.scale(
+            self.image,
+            (self.largura_lago, self.altura_lago)
+        )
+
+        self.rect = self.image.get_rect(topleft=(self.PosX, self.PosY))
+        self.mask = pygame.mask.from_surface(self.image)
