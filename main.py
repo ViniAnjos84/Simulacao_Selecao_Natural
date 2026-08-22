@@ -23,6 +23,14 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
+        teclas = pygame.key.get_pressed()
+
+        if teclas[pygame.K_PLUS] or teclas[pygame.K_KP_PLUS]:
+            temperatura = min(temperatura + 0.5, 40)
+
+        if teclas[pygame.K_MINUS] or teclas[pygame.K_KP_MINUS]:
+            temperatura = max(temperatura - 0.5, -15)
+
         cor_cenario = cor_grama(temperatura)
         screen.fill(cor_cenario)
         pygame.display.flip()
