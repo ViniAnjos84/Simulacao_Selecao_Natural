@@ -3,6 +3,7 @@ import random
 import pygame
 
 from funcoes import ALTURA_MUNDO, LARGURA_MUNDO, cor_grama, exibe_mensagem
+from objetos import Arbusto
 
 
 WIDTH = 900
@@ -16,12 +17,18 @@ def main():
     pygame.display.set_caption("Simulação de Seleção Natural")
 
     temperatura = 15
+    qtd_arbustos = 10
     zoom = 0.25
 
     camera_x = 0.0
     camera_y = 0.0
     arrastando_camera = False
     posicao_anterior_mouse = None
+
+    arbustos = [
+        Arbusto(LARGURA_MUNDO, ALTURA_MUNDO)
+        for _ in range(qtd_arbustos)
+    ]
 
     quadrados = []
 
@@ -61,12 +68,12 @@ def main():
                 camera_y = mundo_y_antes - mouse_y / zoom
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 3:
+                if event.button == 1:
                     arrastando_camera = True
                     posicao_anterior_mouse = event.pos
 
             if event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 3:
+                if event.button == 1:
                     arrastando_camera = False
                     posicao_anterior_mouse = None
 
@@ -86,6 +93,9 @@ def main():
 
         if teclas[pygame.K_MINUS] or teclas[pygame.K_KP_MINUS]:
             temperatura = max(temperatura - 0.1, -15)
+
+        for arbusto in arbustos:
+            arbusto.update()
 
         largura_visivel = WIDTH / zoom
         altura_visivel = HEIGHT / zoom
@@ -107,6 +117,22 @@ def main():
             )
 
             pygame.draw.rect(screen, q["cor"], rect_visual)
+
+        for arbusto in arbustos:
+            rect = arbusto.rect
+
+            rect_visual = pygame.Rect(
+                int((rect.x - camera_x) * zoom),
+                int((rect.y - camera_y) * zoom),
+                max(1, int(rect.width * zoom)),
+                max(1, int(rect.height * zoom))
+            )
+
+            image = pygame.transform.scale(
+                arbusto.image,
+                (rect_visual.width, rect_visual.height)
+            )
+            screen.blit(image, rect_visual)
 
         texto_temperatura = exibe_mensagem(
             f"Temperatura: {temperatura:.1f}°C",
