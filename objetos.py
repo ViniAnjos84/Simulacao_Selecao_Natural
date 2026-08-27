@@ -55,6 +55,7 @@ class Arbusto:
 
 class Criatura:
     MOSTRAR_RAIO_VISAO = True
+    MOSTRAR_BARRA_FOME = True
 
     def __init__(self, spritesheet, pais=None):
         # Características gerais
@@ -106,7 +107,7 @@ class Criatura:
             self.nome = None
             self.dieta = "Herbívoro"
             self.vida = None
-            self.fome = None
+            self.fome = 100
             self.nvl_velocidade = 0
             self.velocidade = 4
             self.tamanho = 50
@@ -197,11 +198,43 @@ class Criatura:
                 self.tempo_sem_alvo = 0
 
         velocidade = self.velocidade if self.velocidade is not None else 0
-        self.rect.x += int(self.direcao_x * velocidade * dt * 60)
-        self.rect.y += int(self.direcao_y * velocidade * dt * 60)
-        self.rect.clamp_ip(pygame.Rect(0, 0, largura_mundo, altura_mundo))
+        movimento_x = self.direcao_x * velocidade * dt * 60
+        movimento_y = self.direcao_y * velocidade * dt * 60
+
+        self.rect.x += int(movimento_x)
+        self.rect.y += int(movimento_y)
+
+        # Ao tocar uma parede, muda a direção em vez de ficar preso nela.
+        bateu_horizontal = False
+        bateu_vertical = False
+
+        if self.rect.left <= 0:
+            self.rect.left = 0
+            bateu_horizontal = True
+            self.direcao_x = abs(self.direcao_x)
+        elif self.rect.right >= largura_mundo:
+            self.rect.right = largura_mundo
+            bateu_horizontal = True
+            self.direcao_x = -abs(self.direcao_x)
+
+        if self.rect.top <= 0:
+            self.rect.top = 0
+            bateu_vertical = True
+            self.direcao_y = abs(self.direcao_y)
+        elif self.rect.bottom >= altura_mundo:
+            self.rect.bottom = altura_mundo
+            bateu_vertical = True
+            self.direcao_y = -abs(self.direcao_y)
+
+        if bateu_horizontal or bateu_vertical:
+            self.alvo = None
+            self.tempo_movimento = random.uniform(1.0, 3.0)
 
     def update(self):
+        # A fome diminui 0.01 por frame.
+        if self.fome is not None:
+            self.fome = max(0, self.fome - 0.01)
+
         self.indice_frame_atual += 0.07
         if self.indice_frame_atual >= len(self.frames_criatura):
             self.indice_frame_atual = 0
@@ -233,4 +266,27 @@ class Criatura:
             (centro_x, centro_y),
             raio_visual,
             1
+        )
+
+    def desenhar_barra_fome(self, superficie, camera_x=0, camera_y=0, zoom=1):
+        if not self.MOSTRAR_BARRA_FOME:
+            return
+
+        fome = max(0, min(100, self.fome if self.fome is not None else 0))
+
+        largura = max(20, int(self.tamanho * zoom))
+        altura = max(4, int(6 * zoom))
+        x = int((self.rect.centerx - camera_x) * zoom - largura / 2)
+        y = int((self.rect.top - camera_y) * zoom - altura - 5 * zoom)
+
+        pygame.draw.rect(
+            superficie,
+            (40, 40, 40),
+            pygame.Rect(x, y, largura, altura)
+        )
+
+        pygame.draw.rect(
+            superficie,
+            (60, 200, 60),
+            pygame.Rect(x, y, int(largura * fome / 100), altura)
         )
