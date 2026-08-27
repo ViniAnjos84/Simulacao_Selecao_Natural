@@ -67,6 +67,8 @@ def main():
     running = True
 
     while running:
+        dt = clock.tick(60) / 1000
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -106,6 +108,7 @@ def main():
             arbusto.update()
 
         for criatura in criaturas:
+            criatura.movimentar(arbustos, LARGURA_MUNDO, ALTURA_MUNDO, dt)
             criatura.update()
 
         largura_visivel = WIDTH / zoom
@@ -160,8 +163,11 @@ def main():
             )
             screen.blit(image, rect_visual)
 
+            criatura.desenhar_raio_visao(
+                screen, camera_x, camera_y, zoom
+            )
+
         pygame.display.flip()
-        clock.tick(60)
 
     pygame.quit()
 
