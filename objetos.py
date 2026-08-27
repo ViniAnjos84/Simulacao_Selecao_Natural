@@ -108,13 +108,13 @@ class Criatura:
             self.vida = None
             self.fome = None
             self.nvl_velocidade = 0
-            self.velocidade = 8
-            self.tamanho = 100
+            self.velocidade = 4
+            self.tamanho = 50
             self.nvl_ataque = 0
             self.ataque = None
             self.nvl_defesa = 0
             self.defesa = None
-            self.nvl_visao = 0
+            self.nvl_visao = 3
             self.visao = None
             self.nvl_espinhos = 0
             self.espinhos = None
@@ -136,7 +136,7 @@ class Criatura:
             self.fome = random.choice([pai.fome, mae.fome])
 
     def _obter_raio_visao(self):
-        return {0: 0, 1: 15, 2: 40, 3: 100}.get(self.nvl_visao, 0)
+        return {0: 0, 1: 120, 2: 250, 3: 450}.get(self.nvl_visao, 0)
 
     def _movimento_aleatorio(self):
         if self.tempo_movimento <= 0:
