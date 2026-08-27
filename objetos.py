@@ -101,7 +101,7 @@ class Criatura:
 
             self.nvl_velocidade = 0
             self.velocidade = 8
-            self.tamanho = 50
+            self.tamanho = 100
             self.nvl_ataque = 0
             self.ataque = None
             self.nvl_defesa = 0
@@ -110,37 +110,34 @@ class Criatura:
             self.visao = None
             self.nvl_espinhos = 0
             self.espinhos = None
-
         else:
             pai, mae = self.pais
-
             atributos = [
                 "nvl_velocidade", "velocidade", "tamanho",
                 "nvl_ataque", "ataque", "nvl_defesa", "defesa",
                 "nvl_visao", "visao", "nvl_espinhos", "espinhos"
             ]
-
             for atributo in atributos:
                 setattr(self, atributo, random.choice([
                     getattr(pai, atributo),
                     getattr(mae, atributo)
                 ]))
-
             self.nome = None
             self.dieta = random.choice([pai.dieta, mae.dieta])
             self.vida = random.choice([pai.vida, mae.vida])
             self.fome = random.choice([pai.fome, mae.fome])
 
     def update(self):
-        self.indice_frame_atual += 1
+        self.indice_frame_atual += 0.07
 
         if self.indice_frame_atual >= len(self.frames_criatura):
             self.indice_frame_atual = 0
 
-        self.image = self.frames_criatura[self.indice_frame_atual]
+        self.image = self.frames_criatura[int(self.indice_frame_atual)]
         self.image = altera_cor_branco(self.image, (50, 180, 50))
         self.image = pygame.transform.scale(
             self.image,
             (self.tamanho, self.tamanho)
         )
         self.mask = pygame.mask.from_surface(self.image)
+        self.rect.size = (self.tamanho, self.tamanho)
