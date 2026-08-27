@@ -17,3 +17,16 @@ def exibe_mensagem(msg, tamanho, cor):
     texto_recortado = texto_formatado.subsurface(bounding).copy()
 
     return texto_recortado
+
+
+def altera_cor_branco(imagem, cor):
+    imagem = imagem.copy()
+    largura, altura = imagem.get_size()
+
+    for x in range(largura):
+        for y in range(altura):
+            if imagem.get_at((x, y))[:3] == (255, 255, 255):
+                alpha = imagem.get_at((x, y))[3]
+                imagem.set_at((x, y), (*cor, alpha))
+
+    return imagem
