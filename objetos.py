@@ -54,16 +54,24 @@ class Arbusto:
 
 class Criatura:
     def __init__(self, spritesheet, pais=None):
-        self.Nome = None
-        self.Dieta = None
-        self.Vida = None
-        self.Fome = None
-        self.Velocidade = None
-        self.Tamanho = None
-        self.Ataque = None
-        self.Defesa = None
-        self.Visão = None
-        self.Espinhos = None
+        # Características gerais
+        self.nome = None
+        self.dieta = None
+        self.vida = None
+        self.fome = None
+
+        # Mutáveis
+        self.nvl_velocidade = None
+        self.velocidade = None
+        self.tamanho = None
+        self.nvl_ataque = None
+        self.ataque = None
+        self.nvl_defesa = None
+        self.defesa = None
+        self.nvl_visao = None
+        self.visao = None
+        self.nvl_espinhos = None
+        self.espinhos = None
 
         self.pais = pais
         self.spritesheet = spritesheet
@@ -72,23 +80,31 @@ class Criatura:
         self.mask = pygame.mask.from_surface(self.image)
 
     def gerar_criatura(self):
-        """Gera os atributos da criatura a partir dos pais ou aleatoriamente."""
+        """Gera os atributos da criatura a partir dos pais ou para a primeira geração."""
         if self.pais is None:
-            self.Nome = None
-            self.Dieta = random.choice(["Herbívoro", "Carnívoro"])
-            self.Vida = random.randint(50, 100)
-            self.Fome = random.randint(0, 100)
-            self.Velocidade = random.uniform(1.0, 5.0)
-            self.Tamanho = random.randint(10, 30)
-            self.Ataque = random.randint(1, 10)
-            self.Defesa = random.randint(1, 10)
-            self.Visão = random.randint(50, 300)
-            self.Espinhos = random.choice([True, False])
+            self.nome = None
+            self.dieta = "Herbívoro"
+            self.vida = None
+            self.fome = None
+
+            self.nvl_velocidade = 0
+            self.velocidade = None
+            self.tamanho = None
+            self.nvl_ataque = 0
+            self.ataque = None
+            self.nvl_defesa = 0
+            self.defesa = None
+            self.nvl_visao = 0
+            self.visao = None
+            self.nvl_espinhos = 0
+            self.espinhos = None
         else:
             pai, mae = self.pais
+
             atributos = [
-                "Dieta", "Vida", "Fome", "Velocidade", "Tamanho",
-                "Ataque", "Defesa", "Visão", "Espinhos"
+                "nvl_velocidade", "velocidade", "tamanho",
+                "nvl_ataque", "ataque", "nvl_defesa", "defesa",
+                "nvl_visao", "visao", "nvl_espinhos", "espinhos"
             ]
 
             for atributo in atributos:
@@ -97,6 +113,7 @@ class Criatura:
                     getattr(mae, atributo)
                 ]))
 
-        self.image = self.spritesheet
-        self.rect = self.image.get_rect()
-        self.mask = pygame.mask.from_surface(self.image)
+            self.nome = None
+            self.dieta = random.choice([pai.dieta, mae.dieta])
+            self.vida = random.choice([pai.vida, mae.vida])
+            self.fome = random.choice([pai.fome, mae.fome])
