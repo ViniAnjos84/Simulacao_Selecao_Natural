@@ -40,6 +40,7 @@ def main():
 
     for criatura in criaturas:
         criatura.gerar_criatura()
+        criatura.update()
         criatura.rect.topleft = (
             random.randint(0, LARGURA_MUNDO - criatura.rect.width),
             random.randint(0, ALTURA_MUNDO - criatura.rect.height)
@@ -103,6 +104,9 @@ def main():
 
         for arbusto in arbustos:
             arbusto.update()
+
+        for criatura in criaturas:
+            criatura.update()
 
         largura_visivel = WIDTH / zoom
         altura_visivel = HEIGHT / zoom
