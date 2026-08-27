@@ -68,6 +68,7 @@ class Criatura:
         self.tempo_movimento = 0
         self.alvo = None
         self.tempo_sem_alvo = 0
+        self.movendo = False
         largura_frame = self.spritesheet.get_width() // 4
         altura_frame = self.spritesheet.get_height()
         for i in range(4):
@@ -107,13 +108,18 @@ class Criatura:
     def _obter_raio_visao(self):
         return {0: 0, 1: 120, 2: 250, 3: 450}.get(self.nvl_visao, 0)
 
-    def _movimento_aleatorio(self):
-        if self.tempo_movimento <= 0:
-            angulo = random.uniform(0, math.tau)
-            self.direcao_x = math.cos(angulo)
-            self.direcao_y = math.sin(angulo)
-            self.tempo_movimento = random.uniform(1.0, 3.0)
-        self.tempo_movimento -= 1 / 60
+    def _iniciar_movimento_aleatorio(self):
+        angulo = random.uniform(0, math.tau)
+        self.direcao_x = math.cos(angulo)
+        self.direcao_y = math.sin(angulo)
+        self.tempo_movimento = random.uniform(1.0, 2.0)
+        self.movendo = True
+
+    def _iniciar_pausa(self):
+        self.direcao_x = 0
+        self.direcao_y = 0
+        self.tempo_movimento = random.uniform(1.0, 2.0)
+        self.movendo = False
 
     def _procurar_arbusto(self, arbustos):
         raio = self._obter_raio_visao()
@@ -132,20 +138,25 @@ class Criatura:
     def alimentar(self, arbusto):
         self.direcao_x = 0
         self.direcao_y = 0
+        self.movendo = False
         if self.fome is None:
             self.fome = 0
         self.fome = min(100, self.fome + 0.5)
         if self.fome >= 100:
             self.alvo = None
             self.tempo_sem_alvo = 0
+            self._iniciar_movimento_aleatorio()
 
     def movimentar(self, arbustos, largura_mundo, altura_mundo, dt=1 / 60):
         fome = self.fome if self.fome is not None else 100
+
         if self.alvo is not None and self.rect.colliderect(self.alvo.rect):
             self.alimentar(self.alvo)
             return
+
         if fome < 60 and self.nvl_visao > 0:
             self.alvo = self._procurar_arbusto(arbustos)
+
         if self.alvo is not None:
             destino = pygame.Vector2(self.alvo.rect.center)
             atual = pygame.Vector2(self.rect.center)
@@ -154,26 +165,32 @@ class Criatura:
                 direcao.normalize_ip()
                 self.direcao_x = direcao.x
                 self.direcao_y = direcao.y
+                self.movendo = True
             else:
-                self.alvo = None
-        elif self.nvl_visao == 0:
-            self._movimento_aleatorio()
+                self.alimentar(self.alvo)
+                return
+
+        elif self.nvl_visao == 0 or fome < 60:
+            if self.tempo_movimento <= 0:
+                if self.movendo:
+                    self._iniciar_pausa()
+                else:
+                    self._iniciar_movimento_aleatorio()
+
         elif fome >= 60:
             if self.tempo_movimento <= 0:
-                if random.random() < 0.35:
-                    self.direcao_x = 0
-                    self.direcao_y = 0
-                    self.tempo_movimento = random.uniform(1.0, 3.0)
+                if self.movendo:
+                    self._iniciar_pausa()
                 else:
-                    self._movimento_aleatorio()
-        else:
-            self.tempo_sem_alvo += dt
-            if self.tempo_sem_alvo >= 2.0:
-                self._movimento_aleatorio()
-                self.tempo_sem_alvo = 0
+                    self._iniciar_movimento_aleatorio()
+
+        self.tempo_movimento -= dt
+
         velocidade = self.velocidade if self.velocidade is not None else 0
-        self.rect.x += int(self.direcao_x * velocidade * dt * 60)
-        self.rect.y += int(self.direcao_y * velocidade * dt * 60)
+        if self.movendo:
+            self.rect.x += int(self.direcao_x * velocidade * dt * 60)
+            self.rect.y += int(self.direcao_y * velocidade * dt * 60)
+
         bateu_horizontal = False
         bateu_vertical = False
         if self.rect.left <= 0:
@@ -194,7 +211,7 @@ class Criatura:
             self.direcao_y = -abs(self.direcao_y)
         if bateu_horizontal or bateu_vertical:
             self.alvo = None
-            self.tempo_movimento = random.uniform(1.0, 3.0)
+            self._iniciar_pausa()
 
     def update(self):
         if self.fome is not None and self.alvo is None:
