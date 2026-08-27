@@ -3,7 +3,7 @@ import random
 import pygame
 
 from funcoes import ALTURA_MUNDO, LARGURA_MUNDO
-from objetos import Arbusto
+from objetos import Arbusto, Criatura
 
 
 WIDTH = 900
@@ -28,6 +28,22 @@ def main():
         Arbusto(LARGURA_MUNDO, ALTURA_MUNDO)
         for _ in range(qtd_arbustos)
     ]
+
+    spritesheet_criatura = pygame.image.load(
+        "images/objects/criaturas/criatura_base.png"
+    ).convert_alpha()
+
+    criaturas = [
+        Criatura(spritesheet_criatura),
+        Criatura(spritesheet_criatura)
+    ]
+
+    for criatura in criaturas:
+        criatura.gerar_criatura()
+        criatura.rect.topleft = (
+            random.randint(0, LARGURA_MUNDO - criatura.rect.width),
+            random.randint(0, ALTURA_MUNDO - criatura.rect.height)
+        )
 
     quadrados = []
 
@@ -120,6 +136,22 @@ def main():
 
             image = pygame.transform.scale(
                 arbusto.image,
+                (rect_visual.width, rect_visual.height)
+            )
+            screen.blit(image, rect_visual)
+
+        for criatura in criaturas:
+            rect = criatura.rect
+
+            rect_visual = pygame.Rect(
+                int((rect.x - camera_x) * zoom),
+                int((rect.y - camera_y) * zoom),
+                max(1, int(rect.width * zoom)),
+                max(1, int(rect.height * zoom))
+            )
+
+            image = pygame.transform.scale(
+                criatura.image,
                 (rect_visual.width, rect_visual.height)
             )
             screen.blit(image, rect_visual)
