@@ -53,7 +53,7 @@ class Arbusto:
 
 
 class Criatura:
-    def __init__(self, spritesheet):
+    def __init__(self, spritesheet, pais=None):
         self.Nome = None
         self.Dieta = None
         self.Vida = None
@@ -65,9 +65,38 @@ class Criatura:
         self.Visão = None
         self.Espinhos = None
 
+        self.pais = pais
         self.spritesheet = spritesheet
         self.image = self.spritesheet
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
 
-        self.image = altera_cor_branco(self.image, (255, 255, 255))
+    def gerar_criatura(self):
+        """Gera os atributos da criatura a partir dos pais ou aleatoriamente."""
+        if self.pais is None:
+            self.Nome = None
+            self.Dieta = random.choice(["Herbívoro", "Carnívoro"])
+            self.Vida = random.randint(50, 100)
+            self.Fome = random.randint(0, 100)
+            self.Velocidade = random.uniform(1.0, 5.0)
+            self.Tamanho = random.randint(10, 30)
+            self.Ataque = random.randint(1, 10)
+            self.Defesa = random.randint(1, 10)
+            self.Visão = random.randint(50, 300)
+            self.Espinhos = random.choice([True, False])
+        else:
+            pai, mae = self.pais
+            atributos = [
+                "Dieta", "Vida", "Fome", "Velocidade", "Tamanho",
+                "Ataque", "Defesa", "Visão", "Espinhos"
+            ]
+
+            for atributo in atributos:
+                setattr(self, atributo, random.choice([
+                    getattr(pai, atributo),
+                    getattr(mae, atributo)
+                ]))
+
+        self.image = self.spritesheet
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
