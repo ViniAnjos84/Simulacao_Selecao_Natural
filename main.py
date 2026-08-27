@@ -163,6 +163,10 @@ def main():
             )
             screen.blit(image, rect_visual)
 
+            criatura.desenhar_barra_fome(
+                screen, camera_x, camera_y, zoom
+            )
+
             criatura.desenhar_raio_visao(
                 screen, camera_x, camera_y, zoom
             )
