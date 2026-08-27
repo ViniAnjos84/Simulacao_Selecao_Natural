@@ -61,9 +61,9 @@ class Criatura:
         self.fome = None
 
         # Mutáveis
-        self.nvl_velocidade = None
         self.velocidade = None
         self.tamanho = None
+
         self.nvl_ataque = None
         self.ataque = None
         self.nvl_defesa = None
@@ -86,10 +86,9 @@ class Criatura:
             self.dieta = "Herbívoro"
             self.vida = None
             self.fome = None
-
-            self.nvl_velocidade = 0
             self.velocidade = None
             self.tamanho = None
+
             self.nvl_ataque = 0
             self.ataque = None
             self.nvl_defesa = 0
@@ -102,7 +101,7 @@ class Criatura:
             pai, mae = self.pais
 
             atributos = [
-                "nvl_velocidade", "velocidade", "tamanho",
+                "velocidade", "tamanho",
                 "nvl_ataque", "ataque", "nvl_defesa", "defesa",
                 "nvl_visao", "visao", "nvl_espinhos", "espinhos"
             ]
