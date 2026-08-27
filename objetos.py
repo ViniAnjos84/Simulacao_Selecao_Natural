@@ -2,6 +2,8 @@ import random
 
 import pygame
 
+from funcoes import altera_cor_branco
+
 
 class Arbusto:
     def __init__(self, largura_mundo, altura_mundo):
@@ -48,3 +50,24 @@ class Arbusto:
             self.indice_frame_atual = 3
 
         self.image = self.frames_arbusto[self.indice_frame_atual]
+
+
+class Criatura:
+    def __init__(self, spritesheet):
+        self.Nome = None
+        self.Dieta = None
+        self.Vida = None
+        self.Fome = None
+        self.Velocidade = None
+        self.Tamanho = None
+        self.Ataque = None
+        self.Defesa = None
+        self.Visão = None
+        self.Espinhos = None
+
+        self.spritesheet = spritesheet
+        self.image = self.spritesheet
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+
+        self.image = altera_cor_branco(self.image, (255, 255, 255))
