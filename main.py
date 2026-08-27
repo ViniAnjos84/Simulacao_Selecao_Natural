@@ -16,7 +16,7 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Simulação de Seleção Natural")
 
-    qtd_arbustos = 30
+    qtd_arbustos = 50
     zoom = 0.25
 
     camera_x = 0.0

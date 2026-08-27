@@ -7,7 +7,7 @@ from funcoes import altera_cor_branco
 
 class Arbusto:
     def __init__(self, largura_mundo, altura_mundo):
-        self.tamanho_arbusto = random.randint(100, 200)
+        self.tamanho_arbusto = random.randint(80, 150)
         self.PosX = random.randint(0, largura_mundo - self.tamanho_arbusto)
         self.PosY = random.randint(0, altura_mundo - self.tamanho_arbusto)
         self.qtd_frutas = random.randint(30, 100)
@@ -101,7 +101,7 @@ class Criatura:
 
             self.nvl_velocidade = 0
             self.velocidade = 8
-            self.tamanho = 100
+            self.tamanho = 50
             self.nvl_ataque = 0
             self.ataque = None
             self.nvl_defesa = 0
