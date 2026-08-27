@@ -61,9 +61,9 @@ class Criatura:
         self.fome = None
 
         # Mutáveis
+        self.nvl_velocidade = None
         self.velocidade = None
         self.tamanho = None
-
         self.nvl_ataque = None
         self.ataque = None
         self.nvl_defesa = None
@@ -75,7 +75,19 @@ class Criatura:
 
         self.pais = pais
         self.spritesheet = spritesheet
-        self.image = self.spritesheet
+        self.frames_criatura = []
+        self.indice_frame_atual = 0
+
+        largura_frame = self.spritesheet.get_width() // 4
+        altura_frame = self.spritesheet.get_height()
+
+        for i in range(4):
+            frame = self.spritesheet.subsurface(
+                pygame.Rect(i * largura_frame, 0, largura_frame, altura_frame)
+            ).copy()
+            self.frames_criatura.append(frame)
+
+        self.image = self.frames_criatura[self.indice_frame_atual]
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
 
@@ -86,9 +98,10 @@ class Criatura:
             self.dieta = "Herbívoro"
             self.vida = None
             self.fome = None
-            self.velocidade = None
-            self.tamanho = None
 
+            self.nvl_velocidade = 0
+            self.velocidade = 8
+            self.tamanho = 50
             self.nvl_ataque = 0
             self.ataque = None
             self.nvl_defesa = 0
@@ -97,11 +110,12 @@ class Criatura:
             self.visao = None
             self.nvl_espinhos = 0
             self.espinhos = None
+
         else:
             pai, mae = self.pais
 
             atributos = [
-                "velocidade", "tamanho",
+                "nvl_velocidade", "velocidade", "tamanho",
                 "nvl_ataque", "ataque", "nvl_defesa", "defesa",
                 "nvl_visao", "visao", "nvl_espinhos", "espinhos"
             ]
@@ -116,3 +130,17 @@ class Criatura:
             self.dieta = random.choice([pai.dieta, mae.dieta])
             self.vida = random.choice([pai.vida, mae.vida])
             self.fome = random.choice([pai.fome, mae.fome])
+
+    def update(self):
+        self.indice_frame_atual += 1
+
+        if self.indice_frame_atual >= len(self.frames_criatura):
+            self.indice_frame_atual = 0
+
+        self.image = self.frames_criatura[self.indice_frame_atual]
+        self.image = altera_cor_branco(self.image, (50, 180, 50))
+        self.image = pygame.transform.scale(
+            self.image,
+            (self.tamanho, self.tamanho)
+        )
+        self.mask = pygame.mask.from_surface(self.image)
