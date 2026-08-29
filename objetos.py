@@ -33,6 +33,7 @@ class Arbusto:
             1 for criatura in (criaturas or [])
             if getattr(criatura, "alimentando", False)
             and getattr(criatura, "alvo", None) is self
+            and getattr(criatura, "esta_vivo", lambda: False)()
         )
 
         if criaturas_comendo > 0:
@@ -139,20 +140,37 @@ class Criatura:
         self.tempo_movimento = random.uniform(1.0, 2.0)
         self.movendo = False
 
+    def _esta_pronto_para_alimentar(self, arbusto):
+        # Exige que pelo menos 10 px da criatura estejam dentro do arbusto.
+        intersecao = self.rect.clip(arbusto.rect)
+        return intersecao.width >= 10 and intersecao.height >= 10
+
     def _procurar_arbusto(self, arbustos):
         raio = self._obter_raio_visao()
         if raio <= 0:
             return None
+
         centro = pygame.Vector2(self.rect.center)
         alvo = None
         menor_distancia = float("inf")
+
         for arbusto in arbustos:
             if arbusto.qtd_frutas <= 25:
                 continue
-            distancia = centro.distance_to(arbusto.rect.center)
+
+            # Mede a menor distância entre a criatura e o retângulo do arbusto,
+            # em vez de usar apenas o centro do arbusto. Isso torna o raio visual
+            # e a busca por comida coerentes mesmo com arbustos grandes.
+            ponto_mais_proximo = pygame.Vector2(
+                max(arbusto.rect.left, min(centro.x, arbusto.rect.right)),
+                max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom))
+            )
+            distancia = centro.distance_to(ponto_mais_proximo)
+
             if distancia <= raio and distancia < menor_distancia:
                 menor_distancia = distancia
                 alvo = arbusto
+
         return alvo
 
     def alimentar(self):
@@ -173,7 +191,7 @@ class Criatura:
         fome = self.fome if self.fome is not None else 100
 
         if self.alimentando:
-            if self.alvo is not None and self.alvo.qtd_frutas > 0 and fome < 100:
+            if self.alvo is not None and self.alvo.qtd_frutas > 0 and fome < 100 and self._esta_pronto_para_alimentar(self.alvo):
                 self.alimentar()
                 return
             self.alimentando = False
@@ -181,7 +199,7 @@ class Criatura:
             self._iniciar_pausa()
             return
 
-        if self.alvo is not None and self.rect.colliderect(self.alvo.rect):
+        if self.alvo is not None and self._esta_pronto_para_alimentar(self.alvo):
             self.alimentando = True
             self.alimentar()
             return
@@ -199,8 +217,7 @@ class Criatura:
                 self.direcao_y = direcao.y
                 self.movendo = True
             else:
-                self.alimentar()
-                return
+                self._iniciar_pausa()
         elif self.nvl_visao == 0 or fome < 60:
             if self.tempo_movimento <= 0:
                 if self.movendo:
@@ -257,7 +274,7 @@ class Criatura:
         self.rect.size = (self.tamanho, self.tamanho)
 
     def esta_vivo(self):
-        return self.fome > 0
+        return self.fome is not None and self.fome > 0
 
     def desenhar_raio_visao(self, superficie, camera_x=0, camera_y=0, zoom=1):
         if not self.MOSTRAR_RAIO_VISAO:
