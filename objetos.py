@@ -29,7 +29,6 @@ class Arbusto:
     def update(self, criaturas=None, dt=1 / 60):
         self.qtd_frutas = max(0, min(100, self.qtd_frutas))
 
-        # Cada criatura efetivamente se alimentando deste arbusto consome 2 frutas por frame.
         criaturas_comendo = sum(
             1 for criatura in (criaturas or [])
             if getattr(criatura, "alimentando", False)
@@ -40,13 +39,11 @@ class Arbusto:
             self.qtd_frutas = max(0, self.qtd_frutas - (2 * criaturas_comendo))
             self.tempo_regeneracao = 0
         else:
-            # Recupera 1 fruta por segundo, independentemente do FPS.
             self.tempo_regeneracao += dt
             while self.tempo_regeneracao >= 1.0:
                 self.qtd_frutas = min(100, self.qtd_frutas + 1)
                 self.tempo_regeneracao -= 1.0
 
-        # 4 frames: cheio, 75%, 50%, vazio.
         if self.qtd_frutas > 75:
             self.indice_frame_atual = 0
         elif self.qtd_frutas > 50:
@@ -158,14 +155,14 @@ class Criatura:
                 alvo = arbusto
         return alvo
 
-    def alimentar(self, arbusto):
+    def alimentar(self):
         self.direcao_x = 0
         self.direcao_y = 0
         self.movendo = False
         self.alimentando = True
         if self.fome is None:
             self.fome = 0
-        self.fome = min(100, self.fome + 0.5)
+        self.fome = min(100, self.fome + 0.1)
         if self.fome >= 100:
             self.alvo = None
             self.alimentando = False
@@ -177,7 +174,7 @@ class Criatura:
 
         if self.alimentando:
             if self.alvo is not None and self.alvo.qtd_frutas > 0 and fome < 100:
-                self.alimentar(self.alvo)
+                self.alimentar()
                 return
             self.alimentando = False
             self.alvo = None
@@ -186,7 +183,7 @@ class Criatura:
 
         if self.alvo is not None and self.rect.colliderect(self.alvo.rect):
             self.alimentando = True
-            self.alimentar(self.alvo)
+            self.alimentar()
             return
 
         if fome < 60 and self.nvl_visao > 0:
@@ -202,7 +199,8 @@ class Criatura:
                 self.direcao_y = direcao.y
                 self.movendo = True
             else:
-                self.alvo = None
+                self.alimentar()
+                return
         elif self.nvl_visao == 0 or fome < 60:
             if self.tempo_movimento <= 0:
                 if self.movendo:
@@ -257,6 +255,9 @@ class Criatura:
         self.image = pygame.transform.scale(self.image, (self.tamanho, self.tamanho))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.size = (self.tamanho, self.tamanho)
+
+    def esta_vivo(self):
+        return self.fome > 0
 
     def desenhar_raio_visao(self, superficie, camera_x=0, camera_y=0, zoom=1):
         if not self.MOSTRAR_RAIO_VISAO:
