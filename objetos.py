@@ -158,9 +158,6 @@ class Criatura:
             if arbusto.qtd_frutas <= 25:
                 continue
 
-            # Mede a menor distância entre a criatura e o retângulo do arbusto,
-            # em vez de usar apenas o centro do arbusto. Isso torna o raio visual
-            # e a busca por comida coerentes mesmo com arbustos grandes.
             ponto_mais_proximo = pygame.Vector2(
                 max(arbusto.rect.left, min(centro.x, arbusto.rect.right)),
                 max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom))
@@ -199,32 +196,34 @@ class Criatura:
             self._iniciar_pausa()
             return
 
-        if self.alvo is not None and self._esta_pronto_para_alimentar(self.alvo):
-            self.alimentando = True
-            self.alimentar()
-            return
-
-        if fome < 60 and self.nvl_visao > 0:
-            self.alvo = self._procurar_arbusto(arbustos)
+        # Enquanto estiver com fome, a busca por alimento acontece a cada frame.
+        # Isso vale inclusive para criaturas com nivel de visao 0.
+        if fome < 60:
+            novo_alvo = self._procurar_arbusto(arbustos)
+            if novo_alvo is not None:
+                self.alvo = novo_alvo
 
         if self.alvo is not None:
-            destino = pygame.Vector2(self.alvo.rect.center)
-            atual = pygame.Vector2(self.rect.center)
-            direcao = destino - atual
-            if direcao.length() > 2:
-                direcao.normalize_ip()
-                self.direcao_x = direcao.x
-                self.direcao_y = direcao.y
-                self.movendo = True
+            # Se o arbusto perdeu todas as frutas, deixa de ser um alvo valido.
+            if self.alvo.qtd_frutas <= 25:
+                self.alvo = None
+            elif self._esta_pronto_para_alimentar(self.alvo):
+                self.alimentando = True
+                self.alimentar()
+                return
             else:
-                self._iniciar_pausa()
-        elif self.nvl_visao == 0 or fome < 60:
-            if self.tempo_movimento <= 0:
-                if self.movendo:
-                    self._iniciar_pausa()
+                destino = pygame.Vector2(self.alvo.rect.center)
+                atual = pygame.Vector2(self.rect.center)
+                direcao = destino - atual
+                if direcao.length() > 2:
+                    direcao.normalize_ip()
+                    self.direcao_x = direcao.x
+                    self.direcao_y = direcao.y
+                    self.movendo = True
                 else:
                     self._iniciar_movimento_aleatorio()
-        elif fome >= 60:
+        
+        if self.alvo is None:
             if self.tempo_movimento <= 0:
                 if self.movendo:
                     self._iniciar_pausa()
