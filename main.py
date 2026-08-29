@@ -24,22 +24,15 @@ def main():
     arrastando_camera = False
     posicao_anterior_mouse = None
 
-    arbustos = [
-        Arbusto(LARGURA_MUNDO, ALTURA_MUNDO)
-        for _ in range(qtd_arbustos)
-    ]
+    arbustos = [Arbusto(LARGURA_MUNDO, ALTURA_MUNDO) for _ in range(qtd_arbustos)]
 
-    spritesheet_criatura = pygame.image.load(
-        "images/objects/criaturas/criatura_base.png"
-    ).convert_alpha()
+    spritesheet_criatura = pygame.image.load("images/objects/criaturas/criatura_base.png").convert_alpha()
 
-    emoji_coracao = pygame.image.load(
-        "images/UI/emoji_coracao.png"
-    ).convert_alpha()
+    emoji_coracao = pygame.image.load("images/UI/emoji_coracao.png").convert_alpha()
 
     criaturas = []
     qtd_criaturas = 10
-    for i in range(qtd_criaturas):
+    for _ in range(qtd_criaturas):
         criatura = Criatura(spritesheet_criatura)
         criaturas.append(criatura)
 
@@ -52,17 +45,13 @@ def main():
         )
 
     quadrados = []
-
     TAMANHO = 10
-
     for _ in range(1000):
         x = random.randint(0, LARGURA_MUNDO - TAMANHO)
         y = random.randint(0, ALTURA_MUNDO - TAMANHO)
-
         cor1 = (77, 170, 73)
         cor2 = (120, 170, 73)
         cor3 = (120, 125, 73)
-
         quadrados.append({
             "rect": pygame.Rect(x, y, TAMANHO, TAMANHO),
             "cor": random.choice([cor1, cor2, cor3])
@@ -80,13 +69,10 @@ def main():
 
             if event.type == pygame.MOUSEWHEEL:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-
                 mundo_x_antes = camera_x + mouse_x / zoom
                 mundo_y_antes = camera_y + mouse_y / zoom
-
                 zoom += event.y * 0.1
                 zoom = max(0.25, min(zoom, 2.0))
-
                 camera_x = mundo_x_antes - mouse_x / zoom
                 camera_y = mundo_y_antes - mouse_y / zoom
 
@@ -103,10 +89,8 @@ def main():
             if event.type == pygame.MOUSEMOTION and arrastando_camera:
                 mouse_x, mouse_y = event.pos
                 anterior_x, anterior_y = posicao_anterior_mouse
-
                 camera_x -= (mouse_x - anterior_x) / zoom
                 camera_y -= (mouse_y - anterior_y) / zoom
-
                 posicao_anterior_mouse = event.pos
 
         criaturas = [criatura for criatura in criaturas if criatura.esta_vivo()]
@@ -115,20 +99,19 @@ def main():
             arbusto.update(criaturas, dt)
 
         for criatura in criaturas:
-            criatura.movimentar(
-                arbustos,
-                criaturas,
-                LARGURA_MUNDO,
-                ALTURA_MUNDO,
-                dt
-            )
+            criatura.movimentar(arbustos, criaturas, LARGURA_MUNDO, ALTURA_MUNDO, dt)
             criatura.update(dt)
+
+        if Criatura.novas_criaturas:
+            for filho in Criatura.novas_criaturas:
+                filho.rect.clamp_ip(pygame.Rect(0, 0, LARGURA_MUNDO, ALTURA_MUNDO))
+            criaturas.extend(Criatura.novas_criaturas)
+            Criatura.novas_criaturas.clear()
 
         criaturas = [criatura for criatura in criaturas if criatura.esta_vivo()]
 
         largura_visivel = WIDTH / zoom
         altura_visivel = HEIGHT / zoom
-
         camera_x = max(0, min(camera_x, LARGURA_MUNDO - largura_visivel))
         camera_y = max(0, min(camera_y, ALTURA_MUNDO - altura_visivel))
 
@@ -136,69 +119,47 @@ def main():
 
         for q in quadrados:
             rect = q["rect"]
-
             rect_visual = pygame.Rect(
                 int((rect.x - camera_x) * zoom),
                 int((rect.y - camera_y) * zoom),
                 max(1, int(rect.width * zoom)),
                 max(1, int(rect.height * zoom))
             )
-
             pygame.draw.rect(screen, q["cor"], rect_visual)
 
         for arbusto in arbustos:
             rect = arbusto.rect
-
             rect_visual = pygame.Rect(
                 int((rect.x - camera_x) * zoom),
                 int((rect.y - camera_y) * zoom),
                 max(1, int(rect.width * zoom)),
                 max(1, int(rect.height * zoom))
             )
-
-            image = pygame.transform.scale(
-                arbusto.image,
-                (rect_visual.width, rect_visual.height)
-            )
+            image = pygame.transform.scale(arbusto.image, (rect_visual.width, rect_visual.height))
             screen.blit(image, rect_visual)
 
         for criatura in criaturas:
             rect = criatura.rect
-
             rect_visual = pygame.Rect(
                 int((rect.x - camera_x) * zoom),
                 int((rect.y - camera_y) * zoom),
                 max(1, int(rect.width * zoom)),
                 max(1, int(rect.height * zoom))
             )
-
-            image = pygame.transform.scale(
-                criatura.image,
-                (rect_visual.width, rect_visual.height)
-            )
+            image = pygame.transform.scale(criatura.image, (rect_visual.width, rect_visual.height))
             screen.blit(image, rect_visual)
 
-            # Mostra o coração enquanto a criatura estiver indo até um parceiro.
             if isinstance(criatura.alvo, Criatura) and criatura.alvo.esta_vivo():
                 coracao_tamanho = max(8, int(emoji_coracao.get_width() * zoom * 3))
                 proporcao = coracao_tamanho / emoji_coracao.get_width()
                 coracao_altura = max(8, int(emoji_coracao.get_height() * proporcao))
-                coracao = pygame.transform.scale(
-                    emoji_coracao,
-                    (coracao_tamanho, coracao_altura)
-                )
-
+                coracao = pygame.transform.scale(emoji_coracao, (coracao_tamanho, coracao_altura))
                 coracao_x = rect_visual.right - int(coracao_tamanho * 0.25)
                 coracao_y = rect_visual.top - coracao_altura + int(5 * zoom)
                 screen.blit(coracao, (coracao_x, coracao_y))
 
-            criatura.desenhar_barra_fome(
-                screen, camera_x, camera_y, zoom
-            )
-
-            criatura.desenhar_raio_visao(
-                screen, camera_x, camera_y, zoom
-            )
+            criatura.desenhar_barra_fome(screen, camera_x, camera_y, zoom)
+            criatura.desenhar_raio_visao(screen, camera_x, camera_y, zoom)
 
         pygame.display.flip()
 
