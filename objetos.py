@@ -1,5 +1,6 @@
 import random
 import math
+import string
 
 import pygame
 
@@ -59,6 +60,9 @@ class Criatura:
 
     def __init__(self, spritesheet, pais=None):
         self.nome = None
+        self.especie = None
+        self.idade = 0
+        self._tempo_idade = 0.0
         self.dieta = None
         self.vida = None
         self.fome = None
@@ -84,6 +88,7 @@ class Criatura:
         self.tempo_sem_alvo = 0
         self.movendo = False
         self.alimentando = False
+        self.reproduzindo = False
         self._carregar_frames()
         self.image = self.frames_criatura[self.indice_frame_atual]
         self.rect = self.image.get_rect()
@@ -97,9 +102,16 @@ class Criatura:
             frame = self.spritesheet.subsurface(pygame.Rect(i * largura_frame, 0, largura_frame, altura_frame)).copy()
             self.frames_criatura.append(frame)
 
+    def _gerar_especie(self):
+        tamanho = random.choice([5, 6])
+        return "".join(random.choices(string.ascii_uppercase, k=tamanho))
+
     def gerar_criatura(self):
         if self.pais is None:
             self.nome = None
+            self.especie = self._gerar_especie()
+            self.idade = 0
+            self._tempo_idade = 0.0
             self.dieta = "Herbívoro"
             self.vida = None
             self.fome = 100
@@ -116,6 +128,9 @@ class Criatura:
             self.espinhos = None
         else:
             pai, mae = self.pais
+            self.especie = pai.especie
+            self.idade = 0
+            self._tempo_idade = 0.0
             atributos = ["nvl_velocidade", "velocidade", "tamanho", "nvl_ataque", "ataque", "nvl_defesa", "defesa", "nvl_visao", "visao", "nvl_espinhos", "espinhos"]
             for atributo in atributos:
                 setattr(self, atributo, random.choice([getattr(pai, atributo), getattr(mae, atributo)]))
@@ -148,8 +163,6 @@ class Criatura:
 
     def _procurar_arbusto(self, arbustos):
         raio = self._obter_raio_visao()
-        if raio <= 0:
-            return None
         centro = pygame.Vector2(self.rect.center)
         alvo = None
         menor_distancia = float("inf")
@@ -166,6 +179,29 @@ class Criatura:
                 alvo = arbusto
         return alvo
 
+    def _procurar_par(self, criaturas):
+        raio = self._obter_raio_visao()
+        centro = pygame.Vector2(self.rect.center)
+        alvo = None
+        menor_distancia = float("inf")
+
+        for criatura in criaturas:
+            if criatura is self or not criatura.esta_vivo():
+                continue
+            if criatura.especie != self.especie:
+                continue
+            if criatura.fome <= 80 or criatura.idade <= 5:
+                continue
+            if getattr(criatura, "reproduzindo", False):
+                continue
+
+            distancia = centro.distance_to(criatura.rect.center)
+            if distancia <= raio and distancia < menor_distancia:
+                menor_distancia = distancia
+                alvo = criatura
+
+        return alvo
+
     def alimentar(self):
         self.direcao_x = 0
         self.direcao_y = 0
@@ -180,8 +216,14 @@ class Criatura:
             self.tempo_sem_alvo = 0
             self.tempo_movimento = 0
 
-    def movimentar(self, arbustos, largura_mundo, altura_mundo, dt=1 / 60):
+    def movimentar(self, arbustos, criaturas, largura_mundo, altura_mundo, dt=1 / 60):
         fome = self.fome if self.fome is not None else 100
+
+        # Reprodução tem prioridade quando a criatura está apta.
+        if fome > 80 and self.idade > 5 and not self.alimentando:
+            if self.alvo is None or self.alvo.especie != self.especie or self.alvo.fome <= 80 or self.alvo.idade <= 5:
+                self.alvo = self._procurar_par(criaturas)
+
         if self.alimentando:
             if self.alvo is not None and self.alvo.qtd_frutas > 0 and fome < 100 and self._esta_pronto_para_alimentar(self.alvo):
                 self.alimentar()
@@ -190,11 +232,30 @@ class Criatura:
             self.alvo = None
             self._iniciar_pausa()
             return
-        if fome < 60:
-            novo_alvo = self._procurar_arbusto(arbustos)
-            if novo_alvo is not None:
-                self.alvo = novo_alvo
-        if self.alvo is not None:
+
+        if self.alvo is not None and isinstance(self.alvo, Criatura):
+            if not self.alvo.esta_vivo() or self.alvo.especie != self.especie or self.alvo.fome <= 80 or self.alvo.idade <= 5:
+                self.alvo = None
+            else:
+                destino = pygame.Vector2(self.alvo.rect.center)
+                atual = pygame.Vector2(self.rect.center)
+                direcao = destino - atual
+                if direcao.length() > 2:
+                    direcao.normalize_ip()
+                    self.direcao_x = direcao.x
+                    self.direcao_y = direcao.y
+                    self.movendo = True
+                else:
+                    self.reproduzindo = True
+                    self.direcao_x = 0
+                    self.direcao_y = 0
+                    self.movendo = False
+                    return
+
+        if fome < 60 and self.alvo is None:
+            self.alvo = self._procurar_arbusto(arbustos)
+
+        if self.alvo is not None and isinstance(self.alvo, Arbusto):
             if self.alvo.qtd_frutas <= 25:
                 self.alvo = None
             elif self._esta_pronto_para_alimentar(self.alvo):
@@ -211,19 +272,23 @@ class Criatura:
                     self.direcao_y = direcao.y
                     self.movendo = True
                 else:
-                    self._iniciar_movimento_aleatorio()
+                    self.alvo = None
+
         if self.alvo is None:
             if self.tempo_movimento <= 0:
                 if self.movendo:
                     self._iniciar_pausa()
                 else:
                     self._iniciar_movimento_aleatorio()
+
         if self.tempo_movimento > 0:
             self.tempo_movimento -= dt
+
         velocidade = self.velocidade if self.velocidade is not None else 0
         if self.movendo:
             self.rect.x += int(self.direcao_x * velocidade * dt * 60)
             self.rect.y += int(self.direcao_y * velocidade * dt * 60)
+
         bateu_horizontal = False
         bateu_vertical = False
         if self.rect.left <= 0:
@@ -246,9 +311,15 @@ class Criatura:
             self.alvo = None
             self._iniciar_pausa()
 
-    def update(self):
+    def update(self, dt=1 / 60):
         if self.fome is not None and not self.alimentando:
             self.fome = max(0, self.fome - 0.05)
+
+        self._tempo_idade += dt
+        while self._tempo_idade >= 2.0:
+            self.idade += 1
+            self._tempo_idade -= 2.0
+
         self.indice_frame_atual += 0.07
         if self.indice_frame_atual >= len(self.frames_criatura):
             self.indice_frame_atual = 0
