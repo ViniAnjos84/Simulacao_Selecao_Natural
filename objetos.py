@@ -52,6 +52,7 @@ class Arbusto:
 class Criatura:
     MOSTRAR_RAIO_VISAO = True
     MOSTRAR_BARRA_FOME = True
+    novas_criaturas = []
 
     def __init__(self, spritesheet, pais=None):
         self.nome = None
@@ -73,7 +74,8 @@ class Criatura:
         self.nvl_espinhos = None
         self.espinhos = None
         self.pais = pais
-        self.spritesheet = spritesheet
+        self.spritesheet = spritesheet.copy()
+        self.cor = (50, 180, 50)
         self.frames_criatura = []
         self.indice_frame_atual = 0
         self.direcao_x = 0
@@ -131,18 +133,36 @@ class Criatura:
             self.visao = None
             self.nvl_espinhos = 0
             self.espinhos = None
+            self.cor = (50, 180, 50)
         else:
             pai, mae = self.pais
-            self.especie = pai.especie
+            self.especie = random.choice([pai.especie, mae.especie])
             self.idade = 0
             self._tempo_idade = 0.0
-            atributos = ["nvl_velocidade", "velocidade", "tamanho", "nvl_ataque", "ataque", "nvl_defesa", "defesa", "nvl_visao", "visao", "nvl_espinhos", "espinhos"]
-            for atributo in atributos:
-                setattr(self, atributo, random.choice([getattr(pai, atributo), getattr(mae, atributo)]))
             self.nome = None
             self.dieta = random.choice([pai.dieta, mae.dieta])
             self.vida = random.choice([pai.vida, mae.vida])
             self.fome = random.choice([pai.fome, mae.fome])
+            atributos = [
+                "nvl_velocidade", "velocidade", "tamanho",
+                "nvl_ataque", "ataque", "nvl_defesa", "defesa",
+                "nvl_visao", "visao", "nvl_espinhos", "espinhos"
+            ]
+            for atributo in atributos:
+                setattr(self, atributo, random.choice([getattr(pai, atributo), getattr(mae, atributo)]))
+
+            mutacao = False
+            for atributo in ["nvl_ataque", "nvl_defesa", "nvl_visao", "nvl_espinhos"]:
+                if random.random() < 0.01:
+                    self.__dict__[atributo] = max(0, min(3, self.__dict__[atributo] + random.choice([-1, 1])))
+                    mutacao = True
+
+            if mutacao:
+                self.especie = self.especie[1:] + random.choice(string.ascii_uppercase)
+                self.cor = tuple(random.randint(0, 255) for _ in range(3))
+            else:
+                self.cor = random.choice([pai.cor, mae.cor])
+
         self.spritesheet = criar_spritesheet_criatura(self, self.spritesheet)
         self._carregar_frames()
 
@@ -174,7 +194,10 @@ class Criatura:
         for arbusto in arbustos:
             if arbusto.qtd_frutas <= 25:
                 continue
-            ponto_mais_proximo = pygame.Vector2(max(arbusto.rect.left, min(centro.x, arbusto.rect.right)), max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom)))
+            ponto_mais_proximo = pygame.Vector2(
+                max(arbusto.rect.left, min(centro.x, arbusto.rect.right)),
+                max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom))
+            )
             distancia = centro.distance_to(ponto_mais_proximo)
             if distancia <= raio and distancia < menor_distancia:
                 menor_distancia = distancia
@@ -225,6 +248,33 @@ class Criatura:
         parceiro.direcao_y = 0
         parceiro.movendo = False
 
+    def _finalizar_reproducao(self):
+        parceiro = self.par_reproducao
+        if parceiro is None:
+            return
+        quantidade = random.randint(2, 4)
+        for _ in range(quantidade):
+            filho = Criatura(self.spritesheet, pais=(self, parceiro))
+            filho.gerar_criatura()
+            filho.rect.center = (
+                (self.rect.centerx + parceiro.rect.centerx) // 2 + random.randint(-10, 10),
+                (self.rect.centery + parceiro.rect.centery) // 2 + random.randint(-10, 10)
+            )
+            Criatura.novas_criaturas.append(filho)
+
+        self.reproduzindo = False
+        self.par_reproducao = None
+        self.alvo = None
+        self.aproximando_reproducao = False
+        self.reproducao_pronta = False
+        self.tempo_reproducao = 0.0
+        parceiro.reproduzindo = False
+        parceiro.par_reproducao = None
+        parceiro.alvo = None
+        parceiro.aproximando_reproducao = False
+        parceiro.reproducao_pronta = False
+        parceiro.tempo_reproducao = 0.0
+
     def _atualizar_reproducao(self, dt, largura_mundo, altura_mundo):
         if not self.reproduzindo:
             return False
@@ -240,47 +290,34 @@ class Criatura:
             if self.rect.colliderect(parceiro.rect):
                 self.aproximando_reproducao = False
                 parceiro.aproximando_reproducao = False
-                self.direcao_x = 0
-                self.direcao_y = 0
-                self.movendo = False
-                parceiro.direcao_x = 0
-                parceiro.direcao_y = 0
-                parceiro.movendo = False
-                self.tempo_reproducao = 0.0
-                parceiro.tempo_reproducao = 0.0
+                self.direcao_x = self.direcao_y = 0
+                parceiro.direcao_x = parceiro.direcao_y = 0
+                self.movendo = parceiro.movendo = False
+                self.tempo_reproducao = parceiro.tempo_reproducao = 0.0
                 return True
             destino = pygame.Vector2(parceiro.rect.center)
-            atual = pygame.Vector2(self.rect.center)
-            direcao = destino - atual
+            direcao = destino - pygame.Vector2(self.rect.center)
             if direcao.length() > 0:
                 direcao.normalize_ip()
-                self.direcao_x = direcao.x
-                self.direcao_y = direcao.y
+                self.direcao_x, self.direcao_y = direcao.x, direcao.y
                 self.movendo = True
                 velocidade = self.velocidade if self.velocidade is not None else 0
                 self.rect.x += int(self.direcao_x * velocidade * dt * 60)
                 self.rect.y += int(self.direcao_y * velocidade * dt * 60)
-                if self.rect.left <= 0:
-                    self.rect.left = 0
-                elif self.rect.right >= largura_mundo:
-                    self.rect.right = largura_mundo
-                if self.rect.top <= 0:
-                    self.rect.top = 0
-                elif self.rect.bottom >= altura_mundo:
-                    self.rect.bottom = altura_mundo
+                self.rect.clamp_ip(pygame.Rect(0, 0, largura_mundo, altura_mundo))
             return True
-        self.direcao_x = 0
-        self.direcao_y = 0
+        self.direcao_x = self.direcao_y = 0
         self.movendo = False
         self.tempo_reproducao += dt
         if self.tempo_reproducao >= 3.0:
             self.reproducao_pronta = True
             parceiro.reproducao_pronta = True
+            if self is min(self, parceiro, key=id):
+                self._finalizar_reproducao()
         return True
 
     def alimentar(self):
-        self.direcao_x = 0
-        self.direcao_y = 0
+        self.direcao_x = self.direcao_y = 0
         self.movendo = False
         self.alimentando = True
         if self.fome is None:
@@ -312,9 +349,7 @@ class Criatura:
             if not self.alvo.esta_vivo() or not self._especies_compativeis(self.alvo) or self.alvo.fome <= 80 or self.alvo.idade <= 5:
                 self.alvo = None
             else:
-                destino = pygame.Vector2(self.alvo.rect.center)
-                atual = pygame.Vector2(self.rect.center)
-                direcao = destino - atual
+                direcao = pygame.Vector2(self.alvo.rect.center) - pygame.Vector2(self.rect.center)
                 if direcao.length() > 2:
                     direcao.normalize_ip()
                     self.direcao_x, self.direcao_y = direcao.x, direcao.y
@@ -324,7 +359,7 @@ class Criatura:
                     return
         if fome < 60 and self.alvo is None:
             self.alvo = self._procurar_arbusto(arbustos)
-        if self.alvo is not None and isinstance(self.alvo, Arbusto):
+        if isinstance(self.alvo, Arbusto):
             if self.alvo.qtd_frutas <= 25:
                 self.alvo = None
             elif self._esta_pronto_para_alimentar(self.alvo):
@@ -332,9 +367,7 @@ class Criatura:
                 self.alimentar()
                 return
             else:
-                destino = pygame.Vector2(self.alvo.rect.center)
-                atual = pygame.Vector2(self.rect.center)
-                direcao = destino - atual
+                direcao = pygame.Vector2(self.alvo.rect.center) - pygame.Vector2(self.rect.center)
                 if direcao.length() > 2:
                     direcao.normalize_ip()
                     self.direcao_x, self.direcao_y = direcao.x, direcao.y
@@ -385,7 +418,7 @@ class Criatura:
         if self.indice_frame_atual >= len(self.frames_criatura):
             self.indice_frame_atual = 0
         self.image = self.frames_criatura[int(self.indice_frame_atual)]
-        self.image = altera_cor_branco(self.image, (50, 180, 50))
+        self.image = altera_cor_branco(self.image, self.cor)
         self.image = pygame.transform.scale(self.image, (self.tamanho, self.tamanho))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.size = (self.tamanho, self.tamanho)
