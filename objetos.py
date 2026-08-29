@@ -3,7 +3,7 @@ import math
 
 import pygame
 
-from funcoes import altera_cor_branco
+from funcoes import altera_cor_branco, criar_spritesheet_criatura
 
 
 class Arbusto:
@@ -88,14 +88,17 @@ class Criatura:
         self.tempo_sem_alvo = 0
         self.movendo = False
         self.alimentando = False
+        self._carregar_frames()
+        self.image = self.frames_criatura[self.indice_frame_atual]
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def _carregar_frames(self):
         largura_frame = self.spritesheet.get_width() // 4
         altura_frame = self.spritesheet.get_height()
         for i in range(4):
             frame = self.spritesheet.subsurface(pygame.Rect(i * largura_frame, 0, largura_frame, altura_frame)).copy()
             self.frames_criatura.append(frame)
-        self.image = self.frames_criatura[self.indice_frame_atual]
-        self.rect = self.image.get_rect()
-        self.mask = pygame.mask.from_surface(self.image)
 
     def gerar_criatura(self):
         if self.pais is None:
@@ -124,6 +127,11 @@ class Criatura:
             self.vida = random.choice([pai.vida, mae.vida])
             self.fome = random.choice([pai.fome, mae.fome])
 
+        # A composicao visual precisa acontecer depois dos atributos serem definidos.
+        self.spritesheet = criar_spritesheet_criatura(self, self.spritesheet)
+        self.frames_criatura.clear()
+        self._carregar_frames()
+
     def _obter_raio_visao(self):
         return {0: 60, 1: 120, 2: 250, 3: 450}.get(self.nvl_visao, 60)
 
@@ -141,7 +149,6 @@ class Criatura:
         self.movendo = False
 
     def _esta_pronto_para_alimentar(self, arbusto):
-        # Exige que pelo menos 10 px da criatura estejam dentro do arbusto.
         intersecao = self.rect.clip(arbusto.rect)
         return intersecao.width >= 10 and intersecao.height >= 10
 
@@ -196,15 +203,12 @@ class Criatura:
             self._iniciar_pausa()
             return
 
-        # Enquanto estiver com fome, a busca por alimento acontece a cada frame.
-        # Isso vale inclusive para criaturas com nivel de visao 0.
         if fome < 60:
             novo_alvo = self._procurar_arbusto(arbustos)
             if novo_alvo is not None:
                 self.alvo = novo_alvo
 
         if self.alvo is not None:
-            # Se o arbusto perdeu todas as frutas, deixa de ser um alvo valido.
             if self.alvo.qtd_frutas <= 25:
                 self.alvo = None
             elif self._esta_pronto_para_alimentar(self.alvo):
@@ -222,7 +226,7 @@ class Criatura:
                     self.movendo = True
                 else:
                     self._iniciar_movimento_aleatorio()
-        
+
         if self.alvo is None:
             if self.tempo_movimento <= 0:
                 if self.movendo:
