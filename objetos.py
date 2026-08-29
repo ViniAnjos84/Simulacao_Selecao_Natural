@@ -15,6 +15,7 @@ class Arbusto:
         self.spritesheet = pygame.image.load("images/objects/spritesheet_arbusto.png").convert_alpha()
         self.frames_arbusto = []
         self.indice_frame_atual = 0
+        self.tempo_regeneracao = 0
         largura_frame = self.spritesheet.get_width() // 4
         altura_frame = self.spritesheet.get_height()
         for i in range(4):
@@ -25,12 +26,27 @@ class Arbusto:
         self.rect = self.image.get_rect(topleft=(self.PosX, self.PosY))
         self.mask = pygame.mask.from_surface(self.image)
 
-    def update(self):
-        if self.qtd_frutas < 0:
-            self.qtd_frutas = 0
-        if self.qtd_frutas > 100:
-            self.qtd_frutas = 100
+    def update(self, criaturas=None, dt=1 / 60):
+        self.qtd_frutas = max(0, min(100, self.qtd_frutas))
 
+        # Cada criatura efetivamente se alimentando deste arbusto consome 2 frutas por frame.
+        criaturas_comendo = sum(
+            1 for criatura in (criaturas or [])
+            if getattr(criatura, "alimentando", False)
+            and getattr(criatura, "alvo", None) is self
+        )
+
+        if criaturas_comendo > 0:
+            self.qtd_frutas = max(0, self.qtd_frutas - (2 * criaturas_comendo))
+            self.tempo_regeneracao = 0
+        else:
+            # Recupera 1 fruta por segundo, independentemente do FPS.
+            self.tempo_regeneracao += dt
+            while self.tempo_regeneracao >= 1.0:
+                self.qtd_frutas = min(100, self.qtd_frutas + 1)
+                self.tempo_regeneracao -= 1.0
+
+        # 4 frames: cheio, 75%, 50%, vazio.
         if self.qtd_frutas > 75:
             self.indice_frame_atual = 0
         elif self.qtd_frutas > 50:
@@ -73,6 +89,7 @@ class Criatura:
         self.alvo = None
         self.tempo_sem_alvo = 0
         self.movendo = False
+        self.alimentando = False
         largura_frame = self.spritesheet.get_width() // 4
         altura_frame = self.spritesheet.get_height()
         for i in range(4):
@@ -145,18 +162,30 @@ class Criatura:
         self.direcao_x = 0
         self.direcao_y = 0
         self.movendo = False
+        self.alimentando = True
         if self.fome is None:
             self.fome = 0
         self.fome = min(100, self.fome + 0.5)
         if self.fome >= 100:
             self.alvo = None
+            self.alimentando = False
             self.tempo_sem_alvo = 0
-            self._iniciar_movimento_aleatorio()
+            self.tempo_movimento = 0
 
     def movimentar(self, arbustos, largura_mundo, altura_mundo, dt=1 / 60):
         fome = self.fome if self.fome is not None else 100
 
+        if self.alimentando:
+            if self.alvo is not None and self.alvo.qtd_frutas > 0 and fome < 100:
+                self.alimentar(self.alvo)
+                return
+            self.alimentando = False
+            self.alvo = None
+            self._iniciar_pausa()
+            return
+
         if self.alvo is not None and self.rect.colliderect(self.alvo.rect):
+            self.alimentando = True
             self.alimentar(self.alvo)
             return
 
@@ -173,8 +202,7 @@ class Criatura:
                 self.direcao_y = direcao.y
                 self.movendo = True
             else:
-                self.alimentar(self.alvo)
-                return
+                self.alvo = None
         elif self.nvl_visao == 0 or fome < 60:
             if self.tempo_movimento <= 0:
                 if self.movendo:
@@ -188,7 +216,8 @@ class Criatura:
                 else:
                     self._iniciar_movimento_aleatorio()
 
-        self.tempo_movimento -= dt
+        if self.tempo_movimento > 0:
+            self.tempo_movimento -= dt
 
         velocidade = self.velocidade if self.velocidade is not None else 0
         if self.movendo:
@@ -218,7 +247,7 @@ class Criatura:
             self._iniciar_pausa()
 
     def update(self):
-        if self.fome is not None and self.alvo is None:
+        if self.fome is not None and not self.alimentando:
             self.fome = max(0, self.fome - 0.05)
         self.indice_frame_atual += 0.07
         if self.indice_frame_atual >= len(self.frames_criatura):
