@@ -33,6 +33,10 @@ def main():
         "images/objects/criaturas/criatura_base.png"
     ).convert_alpha()
 
+    emoji_coracao = pygame.image.load(
+        "images/UI/emoji_coracao.png"
+    ).convert_alpha()
+
     criaturas = []
     qtd_criaturas = 10
     for i in range(qtd_criaturas):
@@ -173,6 +177,20 @@ def main():
                 (rect_visual.width, rect_visual.height)
             )
             screen.blit(image, rect_visual)
+
+            # Mostra o coração enquanto a criatura estiver indo até um parceiro.
+            if isinstance(criatura.alvo, Criatura) and criatura.alvo.esta_vivo():
+                coracao_tamanho = max(8, int(emoji_coracao.get_width() * zoom))
+                proporcao = coracao_tamanho / emoji_coracao.get_width()
+                coracao_altura = max(8, int(emoji_coracao.get_height() * proporcao))
+                coracao = pygame.transform.scale(
+                    emoji_coracao,
+                    (coracao_tamanho, coracao_altura)
+                )
+
+                coracao_x = rect_visual.right - int(coracao_tamanho * 0.25)
+                coracao_y = rect_visual.top - coracao_altura + int(5 * zoom)
+                screen.blit(coracao, (coracao_x, coracao_y))
 
             criatura.desenhar_barra_fome(
                 screen, camera_x, camera_y, zoom
