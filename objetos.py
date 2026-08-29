@@ -28,14 +28,18 @@ class Arbusto:
     def update(self):
         if self.qtd_frutas < 0:
             self.qtd_frutas = 0
-        if self.qtd_frutas >= 75:
+        if self.qtd_frutas > 100:
+            self.qtd_frutas = 100
+
+        if self.qtd_frutas > 75:
             self.indice_frame_atual = 0
-        elif 75 > self.qtd_frutas >= 50:
+        elif self.qtd_frutas > 50:
             self.indice_frame_atual = 1
-        elif 50 > self.qtd_frutas >= 25:
+        elif self.qtd_frutas > 25:
             self.indice_frame_atual = 2
         else:
             self.indice_frame_atual = 3
+
         self.image = self.frames_arbusto[self.indice_frame_atual]
 
 
@@ -129,6 +133,8 @@ class Criatura:
         alvo = None
         menor_distancia = float("inf")
         for arbusto in arbustos:
+            if arbusto.qtd_frutas <= 25:
+                continue
             distancia = centro.distance_to(arbusto.rect.center)
             if distancia <= raio and distancia < menor_distancia:
                 menor_distancia = distancia
@@ -169,14 +175,12 @@ class Criatura:
             else:
                 self.alimentar(self.alvo)
                 return
-
         elif self.nvl_visao == 0 or fome < 60:
             if self.tempo_movimento <= 0:
                 if self.movendo:
                     self._iniciar_pausa()
                 else:
                     self._iniciar_movimento_aleatorio()
-
         elif fome >= 60:
             if self.tempo_movimento <= 0:
                 if self.movendo:
