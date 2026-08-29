@@ -103,13 +103,23 @@ class Criatura:
             self.frames_criatura.append(frame)
 
     def _gerar_especie(self):
-        tamanho = random.choice([5, 6])
-        return "".join(random.choices(string.ascii_uppercase, k=tamanho))
+        return "".join(random.choices(string.ascii_uppercase, k=5))
+
+    def _especies_compativeis(self, outra_criatura):
+        if not isinstance(self.especie, str) or not isinstance(outra_criatura.especie, str):
+            return False
+        if len(self.especie) != 5 or len(outra_criatura.especie) != 5:
+            return False
+        letras_iguais = sum(
+            letra_a == letra_b
+            for letra_a, letra_b in zip(self.especie, outra_criatura.especie)
+        )
+        return letras_iguais >= 3
 
     def gerar_criatura(self):
         if self.pais is None:
             self.nome = None
-            self.especie = self._gerar_especie()
+            self.especie = "INICIO"
             self.idade = 0
             self._tempo_idade = 0.0
             self.dieta = "Herbívoro"
@@ -184,22 +194,19 @@ class Criatura:
         centro = pygame.Vector2(self.rect.center)
         alvo = None
         menor_distancia = float("inf")
-
         for criatura in criaturas:
             if criatura is self or not criatura.esta_vivo():
                 continue
-            if criatura.especie != self.especie:
+            if not self._especies_compativeis(criatura):
                 continue
             if criatura.fome <= 80 or criatura.idade <= 5:
                 continue
             if getattr(criatura, "reproduzindo", False):
                 continue
-
             distancia = centro.distance_to(criatura.rect.center)
             if distancia <= raio and distancia < menor_distancia:
                 menor_distancia = distancia
                 alvo = criatura
-
         return alvo
 
     def alimentar(self):
@@ -218,12 +225,9 @@ class Criatura:
 
     def movimentar(self, arbustos, criaturas, largura_mundo, altura_mundo, dt=1 / 60):
         fome = self.fome if self.fome is not None else 100
-
-        # Reprodução tem prioridade quando a criatura está apta.
         if fome > 80 and self.idade > 5 and not self.alimentando:
-            if self.alvo is None or self.alvo.especie != self.especie or self.alvo.fome <= 80 or self.alvo.idade <= 5:
+            if self.alvo is None or not isinstance(self.alvo, Criatura) or not self._especies_compativeis(self.alvo) or self.alvo.fome <= 80 or self.alvo.idade <= 5:
                 self.alvo = self._procurar_par(criaturas)
-
         if self.alimentando:
             if self.alvo is not None and self.alvo.qtd_frutas > 0 and fome < 100 and self._esta_pronto_para_alimentar(self.alvo):
                 self.alimentar()
@@ -232,9 +236,8 @@ class Criatura:
             self.alvo = None
             self._iniciar_pausa()
             return
-
         if self.alvo is not None and isinstance(self.alvo, Criatura):
-            if not self.alvo.esta_vivo() or self.alvo.especie != self.especie or self.alvo.fome <= 80 or self.alvo.idade <= 5:
+            if not self.alvo.esta_vivo() or not self._especies_compativeis(self.alvo) or self.alvo.fome <= 80 or self.alvo.idade <= 5:
                 self.alvo = None
             else:
                 destino = pygame.Vector2(self.alvo.rect.center)
@@ -251,10 +254,8 @@ class Criatura:
                     self.direcao_y = 0
                     self.movendo = False
                     return
-
         if fome < 60 and self.alvo is None:
             self.alvo = self._procurar_arbusto(arbustos)
-
         if self.alvo is not None and isinstance(self.alvo, Arbusto):
             if self.alvo.qtd_frutas <= 25:
                 self.alvo = None
@@ -273,22 +274,18 @@ class Criatura:
                     self.movendo = True
                 else:
                     self.alvo = None
-
         if self.alvo is None:
             if self.tempo_movimento <= 0:
                 if self.movendo:
                     self._iniciar_pausa()
                 else:
                     self._iniciar_movimento_aleatorio()
-
         if self.tempo_movimento > 0:
             self.tempo_movimento -= dt
-
         velocidade = self.velocidade if self.velocidade is not None else 0
         if self.movendo:
             self.rect.x += int(self.direcao_x * velocidade * dt * 60)
-            self.rect.y += int(self.direcao_y * velocidade * dt * 60)
-
+            self.rect.y += int(self.direcao_y * self.direcao_y * velocidade * dt * 60)
         bateu_horizontal = False
         bateu_vertical = False
         if self.rect.left <= 0:
@@ -314,12 +311,10 @@ class Criatura:
     def update(self, dt=1 / 60):
         if self.fome is not None and not self.alimentando:
             self.fome = max(0, self.fome - 0.05)
-
         self._tempo_idade += dt
         while self._tempo_idade >= 2.0:
             self.idade += 1
             self._tempo_idade -= 2.0
-
         self.indice_frame_atual += 0.07
         if self.indice_frame_atual >= len(self.frames_criatura):
             self.indice_frame_atual = 0
