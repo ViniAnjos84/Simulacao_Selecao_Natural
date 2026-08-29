@@ -29,12 +29,7 @@ class Arbusto:
 
     def update(self, criaturas=None, dt=1 / 60):
         self.qtd_frutas = max(0, min(100, self.qtd_frutas))
-        criaturas_comendo = sum(
-            0.025 for criatura in (criaturas or [])
-            if getattr(criatura, "alimentando", False)
-            and getattr(criatura, "alvo", None) is self
-            and getattr(criatura, "esta_vivo", lambda: False)()
-        )
+        criaturas_comendo = sum(0.025 for criatura in (criaturas or []) if getattr(criatura, "alimentando", False) and getattr(criatura, "alvo", None) is self and getattr(criatura, "esta_vivo", lambda: False)())
         if criaturas_comendo > 0:
             self.qtd_frutas = max(0, self.qtd_frutas - (2 * criaturas_comendo))
             self.tempo_regeneracao = 0
@@ -110,11 +105,7 @@ class Criatura:
             return False
         if len(self.especie) != 5 or len(outra_criatura.especie) != 5:
             return False
-        letras_iguais = sum(
-            letra_a == letra_b
-            for letra_a, letra_b in zip(self.especie, outra_criatura.especie)
-        )
-        return letras_iguais >= 3
+        return sum(a == b for a, b in zip(self.especie, outra_criatura.especie)) >= 3
 
     def gerar_criatura(self):
         if self.pais is None:
@@ -179,10 +170,7 @@ class Criatura:
         for arbusto in arbustos:
             if arbusto.qtd_frutas <= 25:
                 continue
-            ponto_mais_proximo = pygame.Vector2(
-                max(arbusto.rect.left, min(centro.x, arbusto.rect.right)),
-                max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom))
-            )
+            ponto_mais_proximo = pygame.Vector2(max(arbusto.rect.left, min(centro.x, arbusto.rect.right)), max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom)))
             distancia = centro.distance_to(ponto_mais_proximo)
             if distancia <= raio and distancia < menor_distancia:
                 menor_distancia = distancia
@@ -199,9 +187,7 @@ class Criatura:
                 continue
             if not self._especies_compativeis(criatura):
                 continue
-            if criatura.fome <= 80 or criatura.idade <= 5:
-                continue
-            if getattr(criatura, "reproduzindo", False):
+            if criatura.fome <= 80 or criatura.idade <= 5 or getattr(criatura, "reproduzindo", False):
                 continue
             distancia = centro.distance_to(criatura.rect.center)
             if distancia <= raio and distancia < menor_distancia:
@@ -245,13 +231,11 @@ class Criatura:
                 direcao = destino - atual
                 if direcao.length() > 2:
                     direcao.normalize_ip()
-                    self.direcao_x = direcao.x
-                    self.direcao_y = direcao.y
+                    self.direcao_x, self.direcao_y = direcao.x, direcao.y
                     self.movendo = True
                 else:
                     self.reproduzindo = True
-                    self.direcao_x = 0
-                    self.direcao_y = 0
+                    self.direcao_x = self.direcao_y = 0
                     self.movendo = False
                     return
         if fome < 60 and self.alvo is None:
@@ -269,23 +253,21 @@ class Criatura:
                 direcao = destino - atual
                 if direcao.length() > 2:
                     direcao.normalize_ip()
-                    self.direcao_x = direcao.x
-                    self.direcao_y = direcao.y
+                    self.direcao_x, self.direcao_y = direcao.x, direcao.y
                     self.movendo = True
                 else:
                     self.alvo = None
-        if self.alvo is None:
-            if self.tempo_movimento <= 0:
-                if self.movendo:
-                    self._iniciar_pausa()
-                else:
-                    self._iniciar_movimento_aleatorio()
+        if self.alvo is None and self.tempo_movimento <= 0:
+            if self.movendo:
+                self._iniciar_pausa()
+            else:
+                self._iniciar_movimento_aleatorio()
         if self.tempo_movimento > 0:
             self.tempo_movimento -= dt
         velocidade = self.velocidade if self.velocidade is not None else 0
         if self.movendo:
             self.rect.x += int(self.direcao_x * velocidade * dt * 60)
-            self.rect.y += int(self.direcao_y * self.direcao_y * velocidade * dt * 60)
+            self.rect.y += int(self.direcao_y * velocidade * dt * 60)
         bateu_horizontal = False
         bateu_vertical = False
         if self.rect.left <= 0:
