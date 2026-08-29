@@ -84,6 +84,9 @@ class Criatura:
         self.movendo = False
         self.alimentando = False
         self.reproduzindo = False
+        self.par_reproducao = None
+        self.tempo_reproducao = 0.0
+        self.reproducao_pronta = False
         self._carregar_frames()
         self.image = self.frames_criatura[self.indice_frame_atual]
         self.rect = self.image.get_rect()
@@ -195,6 +198,47 @@ class Criatura:
                 alvo = criatura
         return alvo
 
+    def _iniciar_reproducao(self, parceiro):
+        self.alvo = parceiro
+        self.par_reproducao = parceiro
+        self.reproduzindo = True
+        self.reproducao_pronta = False
+        self.tempo_reproducao = 0.0
+        self.direcao_x = 0
+        self.direcao_y = 0
+        self.movendo = False
+
+        parceiro.alvo = self
+        parceiro.par_reproducao = self
+        parceiro.reproduzindo = True
+        parceiro.reproducao_pronta = False
+        parceiro.tempo_reproducao = 0.0
+        parceiro.direcao_x = 0
+        parceiro.direcao_y = 0
+        parceiro.movendo = False
+
+    def _atualizar_reproducao(self, dt):
+        if not self.reproduzindo:
+            return False
+
+        parceiro = self.par_reproducao
+        if parceiro is None or not parceiro.esta_vivo():
+            self.reproduzindo = False
+            self.par_reproducao = None
+            self.alvo = None
+            self.tempo_reproducao = 0.0
+            return False
+
+        self.direcao_x = 0
+        self.direcao_y = 0
+        self.movendo = False
+        self.tempo_reproducao += dt
+
+        if self.tempo_reproducao >= 3.0:
+            self.reproducao_pronta = True
+
+        return True
+
     def alimentar(self):
         self.direcao_x = 0
         self.direcao_y = 0
@@ -210,6 +254,10 @@ class Criatura:
             self.tempo_movimento = 0
 
     def movimentar(self, arbustos, criaturas, largura_mundo, altura_mundo, dt=1 / 60):
+        if self.reproduzindo:
+            self._atualizar_reproducao(dt)
+            return
+
         fome = self.fome if self.fome is not None else 100
         if fome > 80 and self.idade > 5 and not self.alimentando:
             if self.alvo is None or not isinstance(self.alvo, Criatura) or not self._especies_compativeis(self.alvo) or self.alvo.fome <= 80 or self.alvo.idade <= 5:
@@ -234,9 +282,7 @@ class Criatura:
                     self.direcao_x, self.direcao_y = direcao.x, direcao.y
                     self.movendo = True
                 else:
-                    self.reproduzindo = True
-                    self.direcao_x = self.direcao_y = 0
-                    self.movendo = False
+                    self._iniciar_reproducao(self.alvo)
                     return
         if fome < 60 and self.alvo is None:
             self.alvo = self._procurar_arbusto(arbustos)
