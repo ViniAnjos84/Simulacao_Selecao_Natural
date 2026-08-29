@@ -33,10 +33,11 @@ def main():
         "images/objects/criaturas/criatura_base.png"
     ).convert_alpha()
 
-    criaturas = [
-        Criatura(spritesheet_criatura),
-        Criatura(spritesheet_criatura)
-    ]
+    criaturas = []
+    qtd_criaturas = 10
+    for i in range(qtd_criaturas):
+        criatura = Criatura(spritesheet_criatura)
+        criaturas.append(criatura)
 
     for criatura in criaturas:
         criatura.gerar_criatura()

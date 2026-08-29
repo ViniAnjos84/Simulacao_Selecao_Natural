@@ -30,7 +30,7 @@ class Arbusto:
         self.qtd_frutas = max(0, min(100, self.qtd_frutas))
 
         criaturas_comendo = sum(
-            1 for criatura in (criaturas or [])
+            0.025 for criatura in (criaturas or [])
             if getattr(criatura, "alimentando", False)
             and getattr(criatura, "alvo", None) is self
             and getattr(criatura, "esta_vivo", lambda: False)()
@@ -110,7 +110,7 @@ class Criatura:
             self.ataque = None
             self.nvl_defesa = 0
             self.defesa = None
-            self.nvl_visao = 3
+            self.nvl_visao = 0
             self.visao = None
             self.nvl_espinhos = 0
             self.espinhos = None
@@ -125,7 +125,7 @@ class Criatura:
             self.fome = random.choice([pai.fome, mae.fome])
 
     def _obter_raio_visao(self):
-        return {0: 0, 1: 120, 2: 250, 3: 450}.get(self.nvl_visao, 0)
+        return {0: 60, 1: 120, 2: 250, 3: 450}.get(self.nvl_visao, 60)
 
     def _iniciar_movimento_aleatorio(self):
         angulo = random.uniform(0, math.tau)
