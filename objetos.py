@@ -35,7 +35,7 @@ class Arbusto:
             self.tempo_regeneracao = 0
         else:
             self.tempo_regeneracao += dt
-            while self.tempo_regeneracao >= 1.0:
+            while self.tempo_regeneracao >= 0.5:
                 self.qtd_frutas = min(100, self.qtd_frutas + 1)
                 self.tempo_regeneracao -= 1.0
         if self.qtd_frutas > 75:
@@ -50,7 +50,7 @@ class Arbusto:
 
 
 class Criatura:
-    MOSTRAR_RAIO_VISAO = True
+    MOSTRAR_RAIO_VISAO = False
     MOSTRAR_BARRA_FOME = True
     novas_criaturas = []
 
@@ -94,6 +94,22 @@ class Criatura:
         self.image = self.frames_criatura[self.indice_frame_atual]
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
+
+    def update(self, dt=1 / 60):
+        if self.fome is not None and not self.alimentando:
+            self.fome = max(0, self.fome - 0.1)
+        self._tempo_idade += dt
+        while self._tempo_idade >= 2.0:
+            self.idade += 1
+            self._tempo_idade -= 2.0
+        self.indice_frame_atual += 0.07
+        if self.indice_frame_atual >= len(self.frames_criatura):
+            self.indice_frame_atual = 0
+        self.image = self.frames_criatura[int(self.indice_frame_atual)]
+        self.image = altera_cor_branco(self.image, self.cor)
+        self.image = pygame.transform.scale(self.image, (self.tamanho, self.tamanho))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.size = (self.tamanho, self.tamanho)
 
     def _carregar_frames(self):
         self.frames_criatura.clear()
@@ -142,7 +158,7 @@ class Criatura:
             self.nome = None
             self.dieta = random.choice([pai.dieta, mae.dieta])
             self.vida = random.choice([pai.vida, mae.vida])
-            self.fome = random.choice([pai.fome, mae.fome])
+            self.fome = 100
             atributos = [
                 "nvl_velocidade", "velocidade", "tamanho",
                 "nvl_ataque", "ataque", "nvl_defesa", "defesa",
@@ -252,7 +268,7 @@ class Criatura:
         parceiro = self.par_reproducao
         if parceiro is None:
             return
-        quantidade = random.randint(2, 4)
+        quantidade = random.randint(1, 3)
         for _ in range(quantidade):
             filho = Criatura(self.spritesheet, pais=(self, parceiro))
             filho.gerar_criatura()
@@ -406,22 +422,6 @@ class Criatura:
         if bateu_horizontal or bateu_vertical:
             self.alvo = None
             self._iniciar_pausa()
-
-    def update(self, dt=1 / 60):
-        if self.fome is not None and not self.alimentando:
-            self.fome = max(0, self.fome - 0.05)
-        self._tempo_idade += dt
-        while self._tempo_idade >= 2.0:
-            self.idade += 1
-            self._tempo_idade -= 2.0
-        self.indice_frame_atual += 0.07
-        if self.indice_frame_atual >= len(self.frames_criatura):
-            self.indice_frame_atual = 0
-        self.image = self.frames_criatura[int(self.indice_frame_atual)]
-        self.image = altera_cor_branco(self.image, self.cor)
-        self.image = pygame.transform.scale(self.image, (self.tamanho, self.tamanho))
-        self.mask = pygame.mask.from_surface(self.image)
-        self.rect.size = (self.tamanho, self.tamanho)
 
     def esta_vivo(self):
         return self.fome is not None and self.fome > 0
