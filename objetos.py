@@ -87,6 +87,7 @@ class Criatura:
         self.par_reproducao = None
         self.tempo_reproducao = 0.0
         self.reproducao_pronta = False
+        self.aproximando_reproducao = False
         self._carregar_frames()
         self.image = self.frames_criatura[self.indice_frame_atual]
         self.rect = self.image.get_rect()
@@ -173,7 +174,10 @@ class Criatura:
         for arbusto in arbustos:
             if arbusto.qtd_frutas <= 25:
                 continue
-            ponto_mais_proximo = pygame.Vector2(max(arbusto.rect.left, min(centro.x, arbusto.rect.right)), max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom)))
+            ponto_mais_proximo = pygame.Vector2(
+                max(arbusto.rect.left, min(centro.x, arbusto.rect.right)),
+                max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom))
+            )
             distancia = centro.distance_to(ponto_mais_proximo)
             if distancia <= raio and distancia < menor_distancia:
                 menor_distancia = distancia
@@ -185,25 +189,40 @@ class Criatura:
         centro = pygame.Vector2(self.rect.center)
         alvo = None
         menor_distancia = float("inf")
+
         for criatura in criaturas:
             if criatura is self or not criatura.esta_vivo():
                 continue
             if not self._especies_compativeis(criatura):
                 continue
-            if criatura.fome <= 80 or criatura.idade <= 5 or getattr(criatura, "reproduzindo", False):
+            if criatura.fome <= 80 or criatura.idade <= 5:
                 continue
+            if getattr(criatura, "reproduzindo", False) or getattr(criatura, "par_reproducao", None) is not None:
+                continue
+
             distancia = centro.distance_to(criatura.rect.center)
             if distancia <= raio and distancia < menor_distancia:
                 menor_distancia = distancia
                 alvo = criatura
+
+        if alvo is not None:
+            # A partir do momento em que encontra um parceiro disponível,
+            # os dois ficam reservados para reprodução. Isso evita que a
+            # ordem do for faça uma criatura perder o parceiro escolhido.
+            self._iniciar_reproducao(alvo)
+
         return alvo
 
     def _iniciar_reproducao(self, parceiro):
+        if parceiro is None or parceiro is self:
+            return
+
         self.alvo = parceiro
         self.par_reproducao = parceiro
         self.reproduzindo = True
         self.reproducao_pronta = False
         self.tempo_reproducao = 0.0
+        self.aproximando_reproducao = True
         self.direcao_x = 0
         self.direcao_y = 0
         self.movendo = False
@@ -213,11 +232,12 @@ class Criatura:
         parceiro.reproduzindo = True
         parceiro.reproducao_pronta = False
         parceiro.tempo_reproducao = 0.0
+        parceiro.aproximando_reproducao = True
         parceiro.direcao_x = 0
         parceiro.direcao_y = 0
         parceiro.movendo = False
 
-    def _atualizar_reproducao(self, dt):
+    def _atualizar_reproducao(self, dt, largura_mundo, altura_mundo):
         if not self.reproduzindo:
             return False
 
@@ -226,9 +246,51 @@ class Criatura:
             self.reproduzindo = False
             self.par_reproducao = None
             self.alvo = None
+            self.aproximando_reproducao = False
             self.tempo_reproducao = 0.0
             return False
 
+        # Primeiro os dois precisam chegar um ao outro.
+        if self.aproximando_reproducao:
+            if self.rect.colliderect(parceiro.rect):
+                self.aproximando_reproducao = False
+                parceiro.aproximando_reproducao = False
+                self.direcao_x = 0
+                self.direcao_y = 0
+                self.movendo = False
+                parceiro.direcao_x = 0
+                parceiro.direcao_y = 0
+                parceiro.movendo = False
+                self.tempo_reproducao = 0.0
+                parceiro.tempo_reproducao = 0.0
+                return True
+
+            destino = pygame.Vector2(parceiro.rect.center)
+            atual = pygame.Vector2(self.rect.center)
+            direcao = destino - atual
+
+            if direcao.length() > 0:
+                direcao.normalize_ip()
+                self.direcao_x = direcao.x
+                self.direcao_y = direcao.y
+                self.movendo = True
+
+                velocidade = self.velocidade if self.velocidade is not None else 0
+                self.rect.x += int(self.direcao_x * velocidade * dt * 60)
+                self.rect.y += int(self.direcao_y * velocidade * dt * 60)
+
+                if self.rect.left <= 0:
+                    self.rect.left = 0
+                elif self.rect.right >= largura_mundo:
+                    self.rect.right = largura_mundo
+                if self.rect.top <= 0:
+                    self.rect.top = 0
+                elif self.rect.bottom >= altura_mundo:
+                    self.rect.bottom = altura_mundo
+
+            return True
+
+        # Os dois já estão encostados: aguardam 3 segundos.
         self.direcao_x = 0
         self.direcao_y = 0
         self.movendo = False
@@ -236,6 +298,7 @@ class Criatura:
 
         if self.tempo_reproducao >= 3.0:
             self.reproducao_pronta = True
+            parceiro.reproducao_pronta = True
 
         return True
 
@@ -255,13 +318,15 @@ class Criatura:
 
     def movimentar(self, arbustos, criaturas, largura_mundo, altura_mundo, dt=1 / 60):
         if self.reproduzindo:
-            self._atualizar_reproducao(dt)
+            self._atualizar_reproducao(dt, largura_mundo, altura_mundo)
             return
 
         fome = self.fome if self.fome is not None else 100
+
         if fome > 80 and self.idade > 5 and not self.alimentando:
             if self.alvo is None or not isinstance(self.alvo, Criatura) or not self._especies_compativeis(self.alvo) or self.alvo.fome <= 80 or self.alvo.idade <= 5:
                 self.alvo = self._procurar_par(criaturas)
+
         if self.alimentando:
             if self.alvo is not None and self.alvo.qtd_frutas > 0 and fome < 100 and self._esta_pronto_para_alimentar(self.alvo):
                 self.alimentar()
@@ -270,6 +335,7 @@ class Criatura:
             self.alvo = None
             self._iniciar_pausa()
             return
+
         if self.alvo is not None and isinstance(self.alvo, Criatura):
             if not self.alvo.esta_vivo() or not self._especies_compativeis(self.alvo) or self.alvo.fome <= 80 or self.alvo.idade <= 5:
                 self.alvo = None
@@ -284,8 +350,10 @@ class Criatura:
                 else:
                     self._iniciar_reproducao(self.alvo)
                     return
+
         if fome < 60 and self.alvo is None:
             self.alvo = self._procurar_arbusto(arbustos)
+
         if self.alvo is not None and isinstance(self.alvo, Arbusto):
             if self.alvo.qtd_frutas <= 25:
                 self.alvo = None
@@ -303,19 +371,24 @@ class Criatura:
                     self.movendo = True
                 else:
                     self.alvo = None
+
         if self.alvo is None and self.tempo_movimento <= 0:
             if self.movendo:
                 self._iniciar_pausa()
             else:
                 self._iniciar_movimento_aleatorio()
+
         if self.tempo_movimento > 0:
             self.tempo_movimento -= dt
+
         velocidade = self.velocidade if self.velocidade is not None else 0
         if self.movendo:
             self.rect.x += int(self.direcao_x * velocidade * dt * 60)
             self.rect.y += int(self.direcao_y * velocidade * dt * 60)
+
         bateu_horizontal = False
         bateu_vertical = False
+
         if self.rect.left <= 0:
             self.rect.left = 0
             bateu_horizontal = True
@@ -324,6 +397,7 @@ class Criatura:
             self.rect.right = largura_mundo
             bateu_horizontal = True
             self.direcao_x = -abs(self.direcao_x)
+
         if self.rect.top <= 0:
             self.rect.top = 0
             bateu_vertical = True
@@ -332,6 +406,7 @@ class Criatura:
             self.rect.bottom = altura_mundo
             bateu_vertical = True
             self.direcao_y = -abs(self.direcao_y)
+
         if bateu_horizontal or bateu_vertical:
             self.alvo = None
             self._iniciar_pausa()
@@ -339,13 +414,16 @@ class Criatura:
     def update(self, dt=1 / 60):
         if self.fome is not None and not self.alimentando:
             self.fome = max(0, self.fome - 0.05)
+
         self._tempo_idade += dt
         while self._tempo_idade >= 2.0:
             self.idade += 1
             self._tempo_idade -= 2.0
+
         self.indice_frame_atual += 0.07
         if self.indice_frame_atual >= len(self.frames_criatura):
             self.indice_frame_atual = 0
+
         self.image = self.frames_criatura[int(self.indice_frame_atual)]
         self.image = altera_cor_branco(self.image, (50, 180, 50))
         self.image = pygame.transform.scale(self.image, (self.tamanho, self.tamanho))
@@ -358,9 +436,11 @@ class Criatura:
     def desenhar_raio_visao(self, superficie, camera_x=0, camera_y=0, zoom=1):
         if not self.MOSTRAR_RAIO_VISAO:
             return
+
         raio = self._obter_raio_visao()
         if raio <= 0:
             return
+
         centro_x = int((self.rect.centerx - camera_x) * zoom)
         centro_y = int((self.rect.centery - camera_y) * zoom)
         raio_visual = max(1, int(raio * zoom))
@@ -369,10 +449,12 @@ class Criatura:
     def desenhar_barra_fome(self, superficie, camera_x=0, camera_y=0, zoom=1):
         if not self.MOSTRAR_BARRA_FOME:
             return
+
         fome = max(0, min(100, self.fome if self.fome is not None else 0))
         largura = max(20, int(self.tamanho * zoom))
         altura = max(4, int(6 * zoom))
         x = int((self.rect.centerx - camera_x) * zoom - largura / 2)
         y = int((self.rect.top - camera_y) * zoom - altura - 5 * zoom)
+
         pygame.draw.rect(superficie, (40, 40, 40), pygame.Rect(x, y, largura, altura))
         pygame.draw.rect(superficie, (60, 200, 60), pygame.Rect(x, y, int(largura * fome / 100), altura))
