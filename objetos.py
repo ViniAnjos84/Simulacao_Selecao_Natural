@@ -28,14 +28,12 @@ class Arbusto:
 
     def update(self, criaturas=None, dt=1 / 60):
         self.qtd_frutas = max(0, min(100, self.qtd_frutas))
-
         criaturas_comendo = sum(
             0.025 for criatura in (criaturas or [])
             if getattr(criatura, "alimentando", False)
             and getattr(criatura, "alvo", None) is self
             and getattr(criatura, "esta_vivo", lambda: False)()
         )
-
         if criaturas_comendo > 0:
             self.qtd_frutas = max(0, self.qtd_frutas - (2 * criaturas_comendo))
             self.tempo_regeneracao = 0
@@ -44,7 +42,6 @@ class Arbusto:
             while self.tempo_regeneracao >= 1.0:
                 self.qtd_frutas = min(100, self.qtd_frutas + 1)
                 self.tempo_regeneracao -= 1.0
-
         if self.qtd_frutas > 75:
             self.indice_frame_atual = 0
         elif self.qtd_frutas > 50:
@@ -53,7 +50,6 @@ class Arbusto:
             self.indice_frame_atual = 2
         else:
             self.indice_frame_atual = 3
-
         self.image = self.frames_arbusto[self.indice_frame_atual]
 
 
@@ -94,6 +90,7 @@ class Criatura:
         self.mask = pygame.mask.from_surface(self.image)
 
     def _carregar_frames(self):
+        self.frames_criatura.clear()
         largura_frame = self.spritesheet.get_width() // 4
         altura_frame = self.spritesheet.get_height()
         for i in range(4):
@@ -126,10 +123,7 @@ class Criatura:
             self.dieta = random.choice([pai.dieta, mae.dieta])
             self.vida = random.choice([pai.vida, mae.vida])
             self.fome = random.choice([pai.fome, mae.fome])
-
-        # A composicao visual precisa acontecer depois dos atributos serem definidos.
         self.spritesheet = criar_spritesheet_criatura(self, self.spritesheet)
-        self.frames_criatura.clear()
         self._carregar_frames()
 
     def _obter_raio_visao(self):
@@ -156,25 +150,20 @@ class Criatura:
         raio = self._obter_raio_visao()
         if raio <= 0:
             return None
-
         centro = pygame.Vector2(self.rect.center)
         alvo = None
         menor_distancia = float("inf")
-
         for arbusto in arbustos:
             if arbusto.qtd_frutas <= 25:
                 continue
-
             ponto_mais_proximo = pygame.Vector2(
                 max(arbusto.rect.left, min(centro.x, arbusto.rect.right)),
                 max(arbusto.rect.top, min(centro.y, arbusto.rect.bottom))
             )
             distancia = centro.distance_to(ponto_mais_proximo)
-
             if distancia <= raio and distancia < menor_distancia:
                 menor_distancia = distancia
                 alvo = arbusto
-
         return alvo
 
     def alimentar(self):
@@ -193,7 +182,6 @@ class Criatura:
 
     def movimentar(self, arbustos, largura_mundo, altura_mundo, dt=1 / 60):
         fome = self.fome if self.fome is not None else 100
-
         if self.alimentando:
             if self.alvo is not None and self.alvo.qtd_frutas > 0 and fome < 100 and self._esta_pronto_para_alimentar(self.alvo):
                 self.alimentar()
@@ -202,12 +190,10 @@ class Criatura:
             self.alvo = None
             self._iniciar_pausa()
             return
-
         if fome < 60:
             novo_alvo = self._procurar_arbusto(arbustos)
             if novo_alvo is not None:
                 self.alvo = novo_alvo
-
         if self.alvo is not None:
             if self.alvo.qtd_frutas <= 25:
                 self.alvo = None
@@ -226,22 +212,18 @@ class Criatura:
                     self.movendo = True
                 else:
                     self._iniciar_movimento_aleatorio()
-
         if self.alvo is None:
             if self.tempo_movimento <= 0:
                 if self.movendo:
                     self._iniciar_pausa()
                 else:
                     self._iniciar_movimento_aleatorio()
-
         if self.tempo_movimento > 0:
             self.tempo_movimento -= dt
-
         velocidade = self.velocidade if self.velocidade is not None else 0
         if self.movendo:
             self.rect.x += int(self.direcao_x * velocidade * dt * 60)
             self.rect.y += int(self.direcao_y * velocidade * dt * 60)
-
         bateu_horizontal = False
         bateu_vertical = False
         if self.rect.left <= 0:
