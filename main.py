@@ -104,12 +104,20 @@ def main():
 
                 posicao_anterior_mouse = event.pos
 
+        # Remove imediatamente criaturas que já estavam mortas antes deste frame.
+        criaturas = [criatura for criatura in criaturas if criatura.esta_vivo()]
+
+        # O arbusto recebe a lista de criaturas para saber quantas estão se alimentando.
         for arbusto in arbustos:
-            arbusto.update()
+            arbusto.update(criaturas, dt)
 
         for criatura in criaturas:
             criatura.movimentar(arbustos, LARGURA_MUNDO, ALTURA_MUNDO, dt)
             criatura.update()
+
+        # O update() pode reduzir a fome até 0. Remove as criaturas mortas
+        # antes da etapa de desenho, evitando que apareçam por mais um frame.
+        criaturas = [criatura for criatura in criaturas if criatura.esta_vivo()]
 
         largura_visivel = WIDTH / zoom
         altura_visivel = HEIGHT / zoom
