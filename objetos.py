@@ -102,12 +102,12 @@ class Criatura:
             self.frames_criatura.append(frame)
 
     def _gerar_especie(self):
-        return "".join(random.choices(string.ascii_uppercase, k=5))
+        return "".join(random.choices(string.ascii_uppercase, k=6))
 
     def _especies_compativeis(self, outra_criatura):
         if not isinstance(self.especie, str) or not isinstance(outra_criatura.especie, str):
             return False
-        if len(self.especie) != 5 or len(outra_criatura.especie) != 5:
+        if len(self.especie) != 6 or len(outra_criatura.especie) != 6:
             return False
         return sum(a == b for a, b in zip(self.especie, outra_criatura.especie)) >= 3
 
