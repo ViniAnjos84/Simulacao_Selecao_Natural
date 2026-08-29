@@ -37,10 +37,10 @@ def criar_spritesheet_criatura(criatura, spritesheet):
     resultado.blit(base, (0, 0))
 
     caracteristicas = [
-        ("nvl_ataque", "ataque"),
         ("nvl_defesa", "defesa"),
         ("nvl_visao", "visao"),
         ("nvl_espinhos", "espinhos"),
+        ("nvl_ataque", "ataque"),
     ]
 
     for nivel_attr, nome_sprite in caracteristicas:

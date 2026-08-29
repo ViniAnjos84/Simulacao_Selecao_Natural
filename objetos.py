@@ -336,6 +336,7 @@ class Criatura:
         self.direcao_x = self.direcao_y = 0
         self.movendo = False
         self.alimentando = True
+
         if self.fome is None:
             self.fome = 0
         self.fome = min(100, self.fome + 0.1)
