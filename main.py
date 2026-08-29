@@ -180,7 +180,7 @@ def main():
 
             # Mostra o coração enquanto a criatura estiver indo até um parceiro.
             if isinstance(criatura.alvo, Criatura) and criatura.alvo.esta_vivo():
-                coracao_tamanho = max(8, int(emoji_coracao.get_width() * zoom))
+                coracao_tamanho = max(8, int(emoji_coracao.get_width() * zoom * 4))
                 proporcao = coracao_tamanho / emoji_coracao.get_width()
                 coracao_altura = max(8, int(emoji_coracao.get_height() * proporcao))
                 coracao = pygame.transform.scale(
